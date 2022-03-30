@@ -8,6 +8,10 @@
 # testing
 /coverage
 
+# hardhat
+/artifacts
+/cache
+
 # production
 /build
 

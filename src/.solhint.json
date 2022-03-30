@@ -1,0 +1,12 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": [],
+  "rules": {
+    "use-forbidden-name": false,
+    "indentation": [
+      "warn",
+      2
+    ],
+    "quotes": false
+  }
+}
