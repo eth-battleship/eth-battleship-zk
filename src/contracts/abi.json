@@ -1,0 +1,211 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "GameOver",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "JoinGame",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "NewGame",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "RevealBoard",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "RevealMoves",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "games",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "ships",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint256",
+        "name": "numRounds",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "boardSize",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "player1",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "player2",
+        "type": "address"
+      },
+      {
+        "internalType": "enum Battleship.GameState",
+        "name": "state",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "winner",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "gameId_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "boardHash_",
+        "type": "bytes32"
+      }
+    ],
+    "name": "join",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "ships_",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint256",
+        "name": "boardSize_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "numRounds_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "boardHash_",
+        "type": "bytes32"
+      }
+    ],
+    "name": "newGame",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "gameId_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "board_",
+        "type": "bytes"
+      }
+    ],
+    "name": "revealBoard",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "gameId_",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "moves_",
+        "type": "uint256"
+      }
+    ],
+    "name": "revealMoves",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalGames",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

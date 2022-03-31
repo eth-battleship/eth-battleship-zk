@@ -3,8 +3,7 @@ import { useEthers, ChainId } from '@usedapp/core'
 import { setFonts } from 'emotion-styled-utils'
 
 import { setupThemes } from '../themes'
-import { NETWORKS } from '../lib/chain'
-import { toHexPrefixedWith0x } from '../lib/utils'
+import { ChainInfo, NETWORKS } from '../lib/chain'
 
 // fonts
 if (typeof window !== 'undefined' && !!window.document) {
@@ -42,9 +41,9 @@ const themes = setupThemes({
 export interface GlobalContextValue {
   theme: object,
   account: string | null | undefined,
-  canonicalChainId: number | null,
+  expectedChain: ChainInfo,
+  currentChain: ChainInfo | undefined,
   userAddress: string | undefined,
-  nativeTokenName: string,
   unsupportedChain: boolean,
 }
 
@@ -73,6 +72,11 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
     })()
   }, [chainId, library])
 
+  // current chain
+  const currentChain = useMemo(() => {
+    return Object.values(NETWORKS).find(({ chainId }) => chainId === canonicalChainId)
+  }, [canonicalChainId])
+
   // get signer address
   useEffect(() => {
     (async () => {
@@ -88,34 +92,24 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
     })()
   }, [chainId, library])
 
+  // expected chain
+  const expectedChain: ChainInfo = useMemo(() => {
+    return NETWORKS[process.env.REACT_APP_NETWORK!] || NETWORKS.local
+  }, [])
+
   // unsupported chain
   const unsupportedChain = useMemo(() => {
-    const expectedChainId: ChainId = parseInt(NETWORKS[CONFIG.NETWORK].chainId, 16)
-    return !canonicalChainId || ![expectedChainId].includes(canonicalChainId as ChainId)
-  }, [canonicalChainId])
-
-  const nativeTokenName = useMemo(() => {
-    if (!canonicalChainId) {
-      return ''
-    }
-
-    const chain = Object.values(NETWORKS).find(({ chainId }) => chainId === toHexPrefixedWith0x(canonicalChainId))
-
-    if (!chain) {
-      return ''
-    }
-
-    return chain.nativeCurrency.symbol
-  }, [canonicalChainId])
+    return !canonicalChainId || expectedChain.chainId !== (canonicalChainId as ChainId)
+  }, [canonicalChainId, expectedChain])
 
   return (
     <GlobalContext.Provider value={{
       theme,
       account,
+      expectedChain,
+      currentChain,
       unsupportedChain,
-      canonicalChainId,
       userAddress,
-      nativeTokenName,
     }}>
       {children}
     </GlobalContext.Provider>

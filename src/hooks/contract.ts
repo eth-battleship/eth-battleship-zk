@@ -1,27 +1,32 @@
 import { Contract } from "@ethersproject/contracts"
 import { TransactionOptions, useContractFunction, useEthers } from "@usedapp/core"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useProgress, UseProgressHook } from "."
-import { loadContractMeta } from "../lib/contract"
 import { ADDRESS_ZERO } from "../lib/utils"
-import { useGlobal } from "./global"
+import { useGlobal, useProgress, UseProgressHook } from "./"
+
+const ABI = require('../contracts/abi.json')
+const ADDRESSES = require('../contracts/addresses.json')
 
 
 type UseContractHook = Contract
 
-export const useContract = (name: string): UseContractHook => {
-  const { canonicalChainId } = useGlobal()
+export const useContract = (): UseContractHook => {
+  const { currentChain } = useGlobal()
   const { library } = useEthers()
-  const meta = useMemo(() => loadContractMeta(canonicalChainId!, name), [canonicalChainId, name])
-  const address = useMemo(() => meta.address || ADDRESS_ZERO, [meta.address])
+  const address = useMemo(() => {
+    if (!currentChain) {
+      return ADDRESS_ZERO
+    }
+    if (!ADDRESSES[currentChain.chainId]) {
+      throw new Error(`Contract address not found for network: ${currentChain.chainName}`)
+    }
+    return ADDRESSES[currentChain.chainId]
+  }, [currentChain])
   const contract = useMemo(() => {
-    return new Contract(address, meta.abi, library)
-  }, [address, library, meta.abi])
+    return new Contract(address, ABI, library)
+  }, [address, library])
   return contract
 }
-
-export const useGifterContract = (): UseContractHook => useContract('Gifter')
-export const useCardMarketContract = (): UseContractHook => useContract('CardMarket')
 
 interface UseContractFunctionV2Hook {
   exec: (...args: any[]) => Promise<unknown>,

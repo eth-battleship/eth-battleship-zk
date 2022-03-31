@@ -1,3 +1,6 @@
+export const color6 = '#EF3F6B'
+
+// standard colours
 export const white = '#fff'
 export const black = '#000'
 export const darkestGrey = '#333'
