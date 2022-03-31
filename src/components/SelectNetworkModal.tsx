@@ -9,11 +9,15 @@ import { useGlobal } from '../hooks'
 import { toHexPrefixedWith0x } from '../lib/utils'
 import { NETWORKS } from '../lib/chain'
 
-const HEIGHT = '200px'
-
 const Container = styled.div`
   ${flex({ direction: 'column', justify: 'space-around', align: 'center' })};
   padding: 2rem 1rem;
+
+  p {
+    ${(p: any) => p.theme.font('header')};
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
 `
 
 const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestClose }) => {
@@ -35,7 +39,9 @@ const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestCl
     setConnectingToNetwork(chainId)
 
     try {
-      await library.send('wallet_switchEthereumChain', [{ chainId }])
+      await library.send('wallet_switchEthereumChain', [{ 
+        chainId: toHexPrefixedWith0x(chainId) 
+      }])
     } catch (switchError: any) {
       // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
@@ -55,9 +61,9 @@ const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestCl
   }, [library])
 
   return (
-    <BaseModal isOpen={isOpen} width='500px' height={HEIGHT} onRequestClose={onRequestClose}>
+    <BaseModal isOpen={isOpen} width='500px' height='200px' onRequestClose={onRequestClose}>
       <Container>
-        <p>Select network</p>
+        <p>Choose network</p>
         <Button onClick={() => switchToNetwork(expectedChain.chainId)}>{expectedChain.chainName}</Button>
       </Container>
     </BaseModal>

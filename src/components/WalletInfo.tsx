@@ -16,7 +16,7 @@ interface BadChainProps {
 
 const BadChain: React.FunctionComponent<BadChainProps> = ({ switchNetwork }) => {
   return (
-    <Button onClick={switchNetwork}>Wrong network</Button>
+    <Button onClick={switchNetwork}>Switch network</Button>
   )
 }
 
@@ -30,7 +30,7 @@ const GoodChain: React.FunctionComponent<GoodChainProps> = ({ connect, disconnec
   return account ? (
     <Button onClick={disconnect}>{account}</Button>
   ) : (
-    <Button onClick={connect}>Connect</Button>
+    <Button onClick={connect}>Connect wallet</Button>
   )
 }
 

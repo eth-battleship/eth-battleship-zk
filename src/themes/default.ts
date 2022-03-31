@@ -51,7 +51,7 @@ const createTheme = (): any => ({
     textColor: bgColor,
   },
   footer: {
-    bgColor: lightGrey,
+    bgColor: lighterGrey,
     textColor: black,
   },
   modal: {
