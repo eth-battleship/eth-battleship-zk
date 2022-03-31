@@ -8,7 +8,7 @@ import LoadingIcon from './LoadingIcon'
 const StyledButton = styled.button`
   ${(p: any) => p.theme.font('body', 'light')};
   font-size: 1.2rem;
-  padding: 1em 2em;
+  padding: 0.7em 1.4em;
   border-radius: 5px;
 
   ${({ disabled, ...p }) => buttonStyles({

@@ -10,6 +10,25 @@ import { useGlobal } from '../hooks'
 const Container = styled.div`
   ${flex({ direction: 'column', justify: 'space-around', align: 'center' })};
   padding: 2rem 1rem;
+
+  p {
+    text-align: center;
+  }
+
+  button {
+    margin-top: 1.5rem;
+  }
+`
+
+const Title = styled.p`
+  ${(p: any) => p.theme.font('header')};
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+`
+
+const Account = styled.p`
+  font-family: monospace;
+  font-size: 0.8rem;
 `
 
 const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestClose }) => {
@@ -23,9 +42,10 @@ const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestCl
   }, [ account, isOpen, onRequestClose ])
 
   return (
-    <BaseModal isOpen={isOpen} width='500px' height='200px' onRequestClose={onRequestClose}>
+    <BaseModal isOpen={isOpen} width='500px' height='230px' onRequestClose={onRequestClose}>
       <Container>
-        <p>Wallet: {account}</p>
+        <Title>Connected wallet</Title>
+        <Account>{account}</Account>
         <Button onClick={deactivate}>Disconnect</Button>
       </Container>
     </BaseModal>

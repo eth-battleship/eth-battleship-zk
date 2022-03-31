@@ -62,6 +62,12 @@ const createTheme = (): any => ({
     textColor: black,
     shadowColor: 'rgba(0, 0, 0, 0.8)',
   },
+  gameBoard: {
+    borderColor: black,
+    cell: {
+      borderColor: darkGrey,
+    }
+  }
 })
 
 export default createTheme

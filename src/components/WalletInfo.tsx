@@ -6,8 +6,12 @@ import ConnectModal from './ConnectModal'
 import DisconnectModal from './DisconnectModal'
 import SelectNetworkModal from './SelectNetworkModal'
 import { useGlobal } from '../hooks'
+import TruncatedAccount from './TruncatedAccount'
 
-const Container = styled.div`
+const Container = styled.div``
+
+const WalletButton = styled(Button)`
+  font-size: 0.8rem;
 `
 
 interface BadChainProps {
@@ -28,7 +32,7 @@ interface GoodChainProps {
 
 const GoodChain: React.FunctionComponent<GoodChainProps> = ({ connect, disconnect, account }) => {
   return account ? (
-    <Button onClick={disconnect}>{account}</Button>
+    <WalletButton onClick={disconnect}>Connected: <TruncatedAccount account={account} /></WalletButton>
   ) : (
     <Button onClick={connect}>Connect wallet</Button>
   )

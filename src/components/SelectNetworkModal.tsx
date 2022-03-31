@@ -46,13 +46,12 @@ const ConnectModal: React.FunctionComponent<ModalProps> = ({ isOpen, onRequestCl
       // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         try {
-          const chain = Object.values(NETWORKS).find(({ chainId: id }) => id === chainId)          
-          await library.send('wallet_addEthereumChain', [
-            { 
-              ...chain!, 
-              chainId: toHexPrefixedWith0x(chainId)
-            }
-          ])
+          const chain = {
+            ...Object.values(NETWORKS).find(({ chainId: id }) => id === chainId),
+            chainId: toHexPrefixedWith0x(chainId),
+          }
+
+          await library.send('wallet_addEthereumChain', [chain])
         } catch (addError: any) {
           window.alert(addError.toString())
         }

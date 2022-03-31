@@ -5,8 +5,8 @@ import {
   Route
 } from "react-router-dom"
 
-import HomePage from './pages/HomePage'
-import NewGame from './pages/NewGame'
+import Home from './pages/Home'
+import CreateGame from './pages/CreateGame'
 import ViewGame from './pages/ViewGame'
 import GlobalStyles from './components/GlobalStyles'
 import { GlobalProvider, GlobalConsumer } from './contexts'
@@ -20,8 +20,8 @@ const Bootstrap: React.FunctionComponent = () => (
         <GlobalStyles />
         <Router>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/new" element={<NewGame />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/create" element={<CreateGame />} />
             <Route path="/:address" element={<ViewGame />} />
           </Routes>
         </Router>
