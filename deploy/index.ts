@@ -32,12 +32,11 @@ async function main() {
   }
   
   await log.task(`Deploy`, async (parentTask: any) => {
-    let gameDeployer: any
-    let gameDeployerArgs: any = []
+    let battleship: any
 
-    await parentTask.task('Deploy Game contract', async (task: any) => {
-      gameDeployer = await deployContract(ctx, 'GameDeployer', gameDeployerArgs)
-      await task.log(`Deployed at ${gameDeployer.address}`)
+    await parentTask.task('Deploy Battleship contract', async (task: any) => {
+      battleship = await deployContract(ctx, 'Battleship', [])
+      await task.log(`Deployed at ${battleship.address}`)
     })
 
     // for rinkeby let's verify contract on etherscan
@@ -50,8 +49,8 @@ async function main() {
         await Promise.all([
           {
             contract: 'contracts/Game.sol:Game',
-            address: game.address,
-            constructorArgs: gameConstructorArgs,
+            address: battleship.address,
+            constructorArgs: [],
           },
         ].map(a => (
           verifyOnEtherscan({
