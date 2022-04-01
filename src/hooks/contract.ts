@@ -41,8 +41,8 @@ interface UseContractFunctionV2Input {
 }
 
 interface PromiseResolvers {
-  resolve: (v: any) => void,
-  reject: (e: Error) => void,
+  resolve: (v: any)=> void,
+  reject: (e: Error)=> void,
 }
 
 export const useContractFunctionV2 = (opts: UseContractFunctionV2Input): UseContractFunctionV2Hook => {

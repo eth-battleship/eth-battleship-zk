@@ -67,6 +67,16 @@ const createTheme = (): any => ({
     cell: {
       borderColor: darkGrey,
     }
+  },
+  ship: {
+    block: {
+      borderColor: black,
+    }
+  },
+  shipSelector: {
+    selectedShip: {
+      outlineColor: black,
+    }
   }
 })
 

@@ -2,7 +2,7 @@ import chalk from 'chalk'
 
 type TaskFunction = (l: Logger) => Promise<any>
 
-type LogFunction = (msg: any, c?: any) => void
+type LogFunction = (msg: any, c?: any)=> void
 
 export interface Logger {
   log: LogFunction,

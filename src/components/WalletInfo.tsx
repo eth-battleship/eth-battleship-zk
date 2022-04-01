@@ -15,7 +15,7 @@ const WalletButton = styled(Button)`
 `
 
 interface BadChainProps {
-  switchNetwork: () => void,
+  switchNetwork: ()=> void,
 }
 
 const BadChain: React.FunctionComponent<BadChainProps> = ({ switchNetwork }) => {
@@ -25,8 +25,8 @@ const BadChain: React.FunctionComponent<BadChainProps> = ({ switchNetwork }) => 
 }
 
 interface GoodChainProps {
-  connect: () => void,
-  disconnect: () => void,
+  connect: ()=> void,
+  disconnect: ()=> void,
   account: string | null | undefined,
 }
 

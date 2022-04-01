@@ -1,6 +1,6 @@
 export interface ButtonProps {
   className?: string,
-  onClick?: () => void,
+  onClick?: ()=> void,
   loading?: boolean,
   disabled?: boolean,
   icon?: string,

@@ -2,7 +2,7 @@ import styled from '@emotion/styled'
 import React, { useCallback, useMemo } from 'react'
 import { useState } from 'react'
 
-import { Position, ShipPosition, shipSitsOn } from '../lib/game'
+import { Position, ShipConfig, shipSitsOn } from '../lib/game'
 
 const Table = styled.table`
   border: 1px solid ${(p: any) => p.theme.gameBoard.borderColor};
@@ -19,8 +19,8 @@ const Table = styled.table`
 
 interface Props {
   boardLength: number,
-  shipPositions: ShipPosition[],
-  onPress: (pos: Position) => void,
+  ships: ShipConfig[],
+  onPress: (pos: Position)=> void,
   styleDecorator?: (cellPos: Position, hover: Position, hasShip: boolean, style: object) => object,
   cellContentRenderer?: (cellPos: Position) => any,
 }
@@ -28,22 +28,22 @@ interface Props {
 interface CellProps extends Props {
   cell: Position,
   hover: Position,
-  onHover: (pos: Position) => void,
+  onHover: (pos: Position)=> void,
 }
 
 
 const Cell: React.FunctionComponent<CellProps> = (props) => {
-  const { cell, shipPositions, cellContentRenderer, hover, styleDecorator, onPress, onHover } = props
+  const { cell, ships, cellContentRenderer, hover, styleDecorator, onPress, onHover } = props
 
   const activeShip = useMemo(() => {
-    return Object.values(shipPositions).find(v => shipSitsOn(v, cell))
-  }, [cell, shipPositions])
+    return Object.values(ships).find(v => shipSitsOn(v, cell))
+  }, [cell, ships])
 
   const cellPosInActiveShip = useMemo(() => {
     if (!activeShip) {
       return -1
     }
-    return (activeShip.isVertical ? (cell.x - activeShip.xy.x) : (cell.y - activeShip.xy.y)) + 1
+    return (activeShip.isVertical ? (cell.x - activeShip.position.x) : (cell.y - activeShip.position.y)) + 1
   }, [activeShip, cell.x, cell.y])
 
   const style: object = useMemo(() => {

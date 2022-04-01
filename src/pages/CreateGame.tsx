@@ -1,3 +1,4 @@
+import styled from '@emotion/styled'
 import React, { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -7,11 +8,21 @@ import { useContract, useContractFunctionV2 } from '../hooks'
 
 const SHIP_LENGTHS = [5, 4, 3, 3, 2]
 
+const H1 = styled.h1`
+  margin-bottom: 2rem;
+`
+
+const StyledSetupGameBoard = styled(SetupGameBoard)`
+  margin-top: 2rem;
+`
+
 const CreateGame: React.FunctionComponent = () => {
   const navigate = useNavigate()
 
   const contract = useContract()
   const contractCall = useContractFunctionV2({ contract, functionName: 'newGame' })
+
+  const onBoardChange = useCallback(() => {}, [])
 
   const createGame = useCallback(async () => {
     // await contractCall.exec(
@@ -35,10 +46,12 @@ const CreateGame: React.FunctionComponent = () => {
 
   return (
     <Layout>
-      <SetupGameBoard
+      <H1>Create game</H1>
+      <p>Select the ships below and place them on the board.</p>
+      <StyledSetupGameBoard
         boardLength={10}
         shipLengths={SHIP_LENGTHS}
-        onDone={createGame}
+        onChange={onBoardChange}
       />
     </Layout>
   )

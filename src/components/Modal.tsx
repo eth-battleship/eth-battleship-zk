@@ -14,7 +14,7 @@ export interface ModalProps extends DefaultProps {
   width?: string | number,
   height?: string | number,
   className?: string,
-  onRequestClose?: () => void,
+  onRequestClose?: ()=> void,
 }
 
 const Modal: React.FunctionComponent<ModalProps> = ({ width, height, className, children, ...props }) => {

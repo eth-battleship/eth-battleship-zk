@@ -5,10 +5,10 @@ export interface UseProgressHook {
   activeStep?: any,
   completed?: boolean,
   error?: Error,
-  setActiveStep: (v: any) => void,
-  setCompleted: () => void,
-  setError: (e: Error) => void,
-  reset: () => void,
+  setActiveStep: (v: any)=> void,
+  setCompleted: ()=> void,
+  setError: (e: Error)=> void,
+  reset: ()=> void,
 }
 
 export const useProgress = (): UseProgressHook => {
