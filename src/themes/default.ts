@@ -9,6 +9,7 @@ import {
   red,
   color6,
   lighterGrey,
+  darkestGrey,
 } from './colors'
 
 const bgColor = white
@@ -66,6 +67,12 @@ const createTheme = (): any => ({
     borderColor: black,
     cell: {
       borderColor: darkGrey,
+      highlight: {
+        bgColor: lightGrey,
+      },
+      ship: {
+        borderColor: darkestGrey,
+      },
     }
   },
   ship: {

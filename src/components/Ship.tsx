@@ -16,12 +16,13 @@ const ShipBlock = styled.td`
 interface Props {
   className?: string,
   ship: ShipConfig,
+  disabled?: boolean,
   onPress: (ship: ShipConfig)=> void,
   blockSize: string,
 }
 
-export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize, className }) => {
-  const onClick = useCallback(() => onPress(ship), [onPress, ship])
+export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize, className, disabled }) => {
+  const onClick = useCallback(() => disabled ? null : onPress(ship), [disabled, onPress, ship])
 
   const rows = useMemo(() => {
     const cols = []
@@ -35,6 +36,8 @@ export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize,
             backgroundColor: getShipColor(ship.length),
             width: blockSize,
             height: blockSize,
+            cursor: disabled ? 'default' : 'pointer',
+            opacity: disabled ? '0.1' : '1',
           }}
           onClick={onClick}
         />
@@ -44,7 +47,7 @@ export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize,
     }
 
     return ship.isVertical ? cols : <tr>{cols}</tr>
-  }, [blockSize, onClick, ship.isVertical, ship.length])
+  }, [blockSize, disabled, onClick, ship.isVertical, ship.length])
 
   return (
     <Table className={className}>

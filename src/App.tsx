@@ -4,14 +4,14 @@ import {
   Routes,
   Route
 } from "react-router-dom"
+import { ThemeProvider } from '@emotion/react'
+import { ChainId, Config, DAppProvider } from '@usedapp/core'
 
 import Home from './pages/Home'
 import CreateGame from './pages/CreateGame'
 import ViewGame from './pages/ViewGame'
 import GlobalStyles from './components/GlobalStyles'
 import { GlobalProvider, GlobalConsumer } from './contexts'
-import { ThemeProvider } from '@emotion/react'
-import { ChainId, Config, DAppProvider } from '@usedapp/core'
 
 const Bootstrap: React.FunctionComponent = () => (
   <GlobalConsumer>

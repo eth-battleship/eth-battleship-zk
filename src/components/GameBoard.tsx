@@ -1,8 +1,10 @@
+import { useTheme } from '@emotion/react'
 import styled from '@emotion/styled'
 import React, { useCallback, useMemo } from 'react'
 import { useState } from 'react'
 
-import { Position, ShipConfig, shipSitsOn } from '../lib/game'
+import { getShipColor, Position, ShipConfig, shipSitsOn } from '../lib/game'
+import { CssStyle } from './interfaces'
 
 const Table = styled.table`
   border: 1px solid ${(p: any) => p.theme.gameBoard.borderColor};
@@ -11,17 +13,20 @@ const Table = styled.table`
 
   td {
     border: 1px solid ${(p: any) => p.theme.gameBoard.cell.borderColor};
-    height: 2em;
-    width: 2em;
+    height: 2rem;
+    width: 2rem;
     text-align: center;
   }
 `
 
+export type StyleDecorator = (cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => CssStyle
+export type OnCellClickHandler = (pos: Position, shipOnCell?: ShipConfig) => void
+
 interface Props {
   boardLength: number,
   ships: ShipConfig[],
-  onPress: (pos: Position)=> void,
-  styleDecorator?: (cellPos: Position, hover: Position, hasShip: boolean, style: object) => object,
+  onPress: OnCellClickHandler,
+  styleDecorator?: StyleDecorator,
   cellContentRenderer?: (cellPos: Position) => any,
 }
 
@@ -33,47 +38,52 @@ interface CellProps extends Props {
 
 
 const Cell: React.FunctionComponent<CellProps> = (props) => {
+  const theme: any = useTheme()
+  
   const { cell, ships, cellContentRenderer, hover, styleDecorator, onPress, onHover } = props
 
-  const activeShip = useMemo(() => {
+  const shipOnCell = useMemo(() => {
     return Object.values(ships).find(v => shipSitsOn(v, cell))
   }, [cell, ships])
 
-  const cellPosInActiveShip = useMemo(() => {
-    if (!activeShip) {
+  const cellPosInshipOnCell = useMemo(() => {
+    if (!shipOnCell) {
       return -1
     }
-    return (activeShip.isVertical ? (cell.x - activeShip.position.x) : (cell.y - activeShip.position.y)) + 1
-  }, [activeShip, cell.x, cell.y])
+    return (shipOnCell.isVertical ? (cell.x - shipOnCell.position.x) : (cell.y - shipOnCell.position.y)) + 1
+  }, [shipOnCell, cell.x, cell.y])
 
-  const style: object = useMemo(() => {
-    let style: Record<string, any> = {}
+  const style = useMemo(() => {
+    let style: CssStyle = {}
 
-    if (cellPosInActiveShip) {
-      switch (cellPosInActiveShip) {
-        case 0: {
-          style[activeShip?.isVertical ? 'borderBottomWidth' : 'borderRightWidth'] = 0
+    if (0 <= cellPosInshipOnCell) {
+      style.backgroundColor = getShipColor(shipOnCell!.length)
+      style.border = `2px solid ${theme.gameBoard.cell.ship.borderColor}`
+
+      switch (cellPosInshipOnCell) {
+        case 1: {
+          style[shipOnCell!.isVertical ? 'borderBottomWidth' : 'borderRightWidth'] = 1
           break
         }
-        case activeShip?.length: {
-          style[activeShip?.isVertical ? 'borderTopWidth' : 'borderLeftWidth'] = 0
+        case shipOnCell!.length: {
+          style[shipOnCell!.isVertical ? 'borderTopWidth' : 'borderLeftWidth'] = 1
           break
         }
         default: {
-          style[activeShip?.isVertical ? 'borderTopWidth' : 'borderLeftWidth'] = 0
-          style[activeShip?.isVertical ? 'borderBottomWidth' : 'borderRightWidth'] = 0
+          style[shipOnCell!.isVertical ? 'borderTopWidth' : 'borderLeftWidth'] = 1
+          style[shipOnCell!.isVertical ? 'borderBottomWidth' : 'borderRightWidth'] = 1
         }
       }
     }
 
     if (styleDecorator) {
-      style = styleDecorator(cell, hover, !!activeShip, style)
+      style = styleDecorator(cell, hover, style, shipOnCell)
     }
 
     return style
-  }, [activeShip, cell, cellPosInActiveShip, hover, styleDecorator])
+  }, [shipOnCell, cell, cellPosInshipOnCell, hover, styleDecorator, theme.gameBoard.cell.ship.borderColor])
 
-  const onClick = useCallback(() => onPress(cell), [cell, onPress])
+  const onClick = useCallback(() => onPress(cell, shipOnCell), [shipOnCell, cell, onPress])
   const onMouseOver = useCallback(() => onHover(cell), [cell, onHover])
   const onMouseOut = useCallback(() => onHover({ x: -1, y: - 1}), [onHover])
 

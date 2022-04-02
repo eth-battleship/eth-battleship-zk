@@ -7,3 +7,4 @@ export interface ButtonProps {
   title?: string,
 }
 
+export type CssStyle = Record<string, number | string>
