@@ -8,7 +8,7 @@ import Layout from '../components/Layout'
 import ProgressBox from '../components/ProgressBox'
 import SetupGameBoard from '../components/SetupGameBoard'
 import SuccessBox from '../components/SuccessBox'
-import { useContract, useContractFunctionV2, useProgress } from '../hooks'
+import { useCloud, useContract, useContractFunctionV2, useProgress } from '../hooks'
 import { extractNewGameIdFromTxReceipt } from '../lib/contract'
 import { Flow } from '../lib/flow'
 import { ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
@@ -29,6 +29,9 @@ const SubmitButton = styled(Button)`
 
 const CreateGame: React.FunctionComponent = () => {
   const navigate = useNavigate()
+
+  const { addNewGame } = useCloud()
+
   const [ ships, setShips ] = useState<ShipConfig[]>([
     { "id": 0, "position": { "x": 0, "y": 2 }, "length": 5, "isVertical": false }, { "id": 1, "position": { "x": 3, "y": 7 }, "length": 4, "isVertical": true }, { "id": 2, "position": { "x": 3, "y": 1 }, "length": 3, "isVertical": false }, { "id": 3, "position": { "x": 7, "y": 6 }, "length": 3, "isVertical": true }, { "id": 4, "position": { "x": 7, "y": 3 }, "length": 2, "isVertical": false }
   ])
@@ -64,12 +67,18 @@ const CreateGame: React.FunctionComponent = () => {
       newGameId = extractNewGameIdFromTxReceipt(receipt)
 
       console.log(`New game id: ${newGameId}`)
+    })
 
+    flow.add('Adding to cloud', async () => {
+      await addNewGame(newGameId, ships)
+    })
+
+    flow.add('Navigating to game screen', async () => {
       navigate(`/view/${newGameId}`)
     })
 
     await flow.run()
-  }, [contract, contractCall, navigate, progress, ships])
+  }, [addNewGame, contract, contractCall, navigate, progress, ships])
 
   return (
     <Layout>

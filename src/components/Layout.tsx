@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { Link } from 'react-router-dom'
-import { flex } from 'emotion-styled-utils'
+import { flex, childAnchors } from 'emotion-styled-utils'
 
 import WalletInfo from './WalletInfo'
 import { CloudConnectionError, CloudNotConnected, Connected, ConnectedContainer, WalletNotConnected } from './ConnectedContainer'
@@ -17,7 +17,7 @@ const Container = styled.div`
   background-color: ${(p: any) => p.theme.layout.bgColor};
   color: ${(p: any) => p.theme.layout.textColor};
   width: 100vw;
-  min-height: 100vh;
+  min-height: 100vh;  
 `
 
 const Header = styled.header`
@@ -28,6 +28,8 @@ const Header = styled.header`
   height: ${headerHeight};
   background-color: ${(p: any) => p.theme.header.bgColor};
   color: ${(p: any) => p.theme.header.textColor};
+
+  ${(p: any) => childAnchors(p.theme.header.anchor)};
 
   & > div {
     ${flex({ direction: 'row', justify: 'space-between', align: 'center' })};
@@ -60,6 +62,8 @@ const Footer = styled.footer`
   padding: 1rem 1rem;
   font-size: 0.7rem;
   text-align: center;
+
+  ${(p: any) => childAnchors(p.theme.anchor)};    
 `
 
 const StyledProgressBox = styled(ProgressBox)`
@@ -83,7 +87,7 @@ const Layout: React.FunctionComponent = ({ children }) => {
           <Connected>{children}</Connected>
           <WalletNotConnected>
             <ErrorBox>
-              Please connect your Ethereum wallet to {expectedChain.chainName} to view this page ↗
+              Please connect your Ethereum wallet to {expectedChain.chainName} and sign the welcome message to play ↗
             </ErrorBox>
           </WalletNotConnected>
           <CloudNotConnected>

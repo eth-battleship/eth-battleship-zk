@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useEthers, ChainId } from '@usedapp/core'
 import { setFonts } from 'emotion-styled-utils'
+import { useAsyncEffect } from 'use-async-effect'
 
 import { setupThemes } from '../themes'
 import { ChainInfo, NETWORKS } from '../lib/chain'
@@ -41,9 +42,10 @@ const themes = setupThemes({
 export interface GlobalContextValue {
   theme: object,
   account: string | null | undefined,
+  authSig: string,
   expectedChain: ChainInfo,
   currentChain: ChainInfo | undefined,
-  userAddress: string | undefined,
+  genesisBlockHash: string,
   unsupportedChain: boolean,
 }
 
@@ -53,23 +55,25 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
   // theme
   const [themeName] = useState('default')
   const [canonicalChainId, setCanonicalChainId] = useState<number | null>(null)
-  const [userAddress, setUserAddress] = useState<string>()
+  const [genesisBlockHash, setGenesisBlockHash] = useState<string>('')
+  const [authenticating, setAuthenticating] = useState<boolean>(false)
+  const [authSig, setAuthSig] = useState<string>('')
   const theme = useMemo(() => themes.get(themeName), [themeName])
 
   // web3
-  const { account, chainId, library } = useEthers()
+  const { account, chainId, library, deactivate } = useEthers()
 
   // get correct chain id
-  useEffect(() => {
-    (async () => {
-      try {
-        setCanonicalChainId(null)
-        const chainIdHexString = await library?.send('eth_chainId', [])
-        setCanonicalChainId(chainIdHexString ? parseInt(chainIdHexString, 16) : null)
-      } catch (err) {
-        console.error(`Error resolving canonical chain id`, err)
-      }
-    })()
+  useAsyncEffect(async () => {
+    try {
+      setCanonicalChainId(null)
+      const chainIdHexString = await library?.send('eth_chainId', [])
+      setCanonicalChainId(chainIdHexString ? parseInt(chainIdHexString, 16) : null)
+      const { hash } = (await library?.getBlock(0))!
+      setGenesisBlockHash(hash)
+    } catch (err) {
+      console.error(`Error resolving canonical chain id and genesis block`, err)
+    }
   }, [chainId, library])
 
   // current chain
@@ -77,20 +81,28 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
     return Object.values(NETWORKS).find(({ chainId }) => chainId === canonicalChainId)
   }, [canonicalChainId])
 
-  // get signer address
-  useEffect(() => {
-    (async () => {
-      let a
-
+  // get auth signature
+  useAsyncEffect(async () => {
+    if (!authSig && !authenticating && library && account) {
       try {
-        a = await (library?.getSigner())?.getAddress()
+        setAuthenticating(true)
+        const signature = await library?.send('personal_sign', ['Please sign this message to play Battleship', account])
+        setAuthSig(signature)
       } catch (err) {
-        // error resolving user address
+        console.error('Signature error', err)
+        deactivate()  
       } finally {
-        setUserAddress(a)
+        setAuthenticating(false)
       }
-    })()
-  }, [chainId, library])
+    }
+  }, [authSig, authenticating, library, account, deactivate])
+
+  // reset auth signature when account is disconnected
+  useEffect(() => {
+    if (!account) {
+      setAuthSig('')
+    }
+  }, [account])
 
   // expected chain
   const expectedChain: ChainInfo = useMemo(() => {
@@ -106,10 +118,11 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
     <GlobalContext.Provider value={{
       theme,
       account,
+      authSig,
       expectedChain,
       currentChain,
+      genesisBlockHash,
       unsupportedChain,
-      userAddress,
     }}>
       {children}
     </GlobalContext.Provider>

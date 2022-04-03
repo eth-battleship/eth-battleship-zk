@@ -22,6 +22,13 @@ const createTheme = (): any => ({
     bgColor,
     textColor,
   },
+  anchor: {
+    textColor: linkColor,
+    hoverTextColor: white,
+    hoverBgColor: linkColor,
+    borderColor: linkColor,
+    hoverBorderColor: linkColor,
+  },
   button: {
     disabledBgColor: grey,
     disabledTextColor: darkGrey,
@@ -59,6 +66,13 @@ const createTheme = (): any => ({
   header: {
     bgColor: textColor,
     textColor: bgColor,
+    anchor: {
+      textColor: white,
+      hoverTextColor: black,
+      hoverBgColor: white,
+      borderColor: transparent,
+      hoverBorderColor: white,
+    },
   },
   footer: {
     bgColor: lighterGrey,

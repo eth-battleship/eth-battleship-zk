@@ -1,5 +1,12 @@
 import { hexlify } from '@ethersproject/bytes'
 
+export enum GameState {
+  NEED_OPPONENT = 0,
+  PLAYER1_TURN = 1,
+  PLAYER2_TURN = 2,
+  REVEAL = 3
+}
+
 export const getShipColor = (length: number): string => {
   switch (length) {
     case 5: {

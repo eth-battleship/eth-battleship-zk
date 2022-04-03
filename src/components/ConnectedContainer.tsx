@@ -12,11 +12,11 @@ const Context = React.createContext({} as ContextValue)
 
 export const ConnectedContainer: React.FunctionComponent = ({ children }) => {
   const { connected: cloudConnected, connectError: cloudConnectionError } = useCloud()
-  const { unsupportedChain, account, currentChain } = useGlobal()
+  const { unsupportedChain, account, authSig, currentChain } = useGlobal()
   
   const walletConnected = useMemo(() => {
-    return !!(account && !unsupportedChain && currentChain)
-  }, [account, currentChain, unsupportedChain])
+    return !!(account && authSig && !unsupportedChain && currentChain)
+  }, [account, authSig, currentChain, unsupportedChain])
 
   return (
     <Context.Provider value={{ 
