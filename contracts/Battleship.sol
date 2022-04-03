@@ -49,8 +49,6 @@ contract Battleship {
     // players
     address player1;
     address player2;
-    // player data
-    mapping(address => Player) players;
     // state
     GameState state;
     // winner
@@ -60,6 +58,8 @@ contract Battleship {
   // all games 
   uint public totalGames;
   mapping(uint => Game) public games;
+  mapping(uint => mapping(address => Player)) players;
+
 
   // events
   event NewGame(uint indexed gameId);
@@ -93,7 +93,7 @@ contract Battleship {
     g.player1 = msg.sender;
     g.state = GameState.NeedPlayer2;
 
-    Player storage p1 = g.players[g.player1];
+    Player storage p1 = players[totalGames][g.player1];
     p1.shipsHash = shipsHash_;
     p1.state = PlayerState.NeedOpponent;
 
@@ -111,12 +111,12 @@ contract Battleship {
     require(g.player1 != address(0) && g.state == GameState.NeedPlayer2, "game in wrong state");
     // add player
     g.player2 = msg.sender;
-    Player storage p2 = g.players[g.player2];
+    Player storage p2 = players[gameId_][g.player2];
     p2.shipsHash = shipsHash_;
     p2.state = PlayerState.Playing;
     // update states
     g.state = GameState.Playing;
-    Player storage p1 = g.players[g.player1];
+    Player storage p1 = players[gameId_][g.player1];
     p1.state = PlayerState.Playing;
 
     emit JoinGame(gameId_);
@@ -138,7 +138,7 @@ contract Battleship {
     require(g.state == GameState.Playing || g.state == GameState.RevealMoves, "game in wrong state");
 
     // check that it's a valid player who hasn't yet revealed moves
-    Player storage p = g.players[msg.sender];
+    Player storage p = players[gameId_][msg.sender];
     require(p.state == PlayerState.Playing, "player in wrong state");
 
     // no. of moves should not be more than max rounds, but can be less since
@@ -153,7 +153,7 @@ contract Battleship {
     address opponent = (msg.sender == g.player1) ? g.player2 : g.player1;
 
     // if opponent has also already revealed moves then update game state
-    Player storage pOpp = g.players[opponent];
+    Player storage pOpp = players[gameId_][opponent];
     if (pOpp.state == PlayerState.RevealedMoves) {
       g.state = GameState.RevealBoard;
     }
@@ -176,7 +176,7 @@ contract Battleship {
     // check game state
     require(g.state == GameState.RevealBoard, "game in wrong state");
     // check that it's a valid player who hasn't yet revealed their board
-    Player storage p = g.players[msg.sender];
+    Player storage p = players[gameId_][msg.sender];
     require(p.state == PlayerState.RevealedMoves, "player in wrong state");
 
     // board hash must match
@@ -189,7 +189,7 @@ contract Battleship {
     address opponent = (g.player1 == msg.sender) ? g.player2 : g.player1;
 
     // calculate opponent's hits
-    Player storage pOpp = g.players[opponent];
+    Player storage pOpp = players[gameId_][opponent];
     calculateAndUpdateHits(g, p, pOpp);
 
     emit RevealBoard(gameId_);

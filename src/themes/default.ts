@@ -11,6 +11,7 @@ import {
   lighterGrey,
   darkestGrey,
   color4,
+  color2,
 } from './colors'
 
 const bgColor = white
@@ -93,7 +94,7 @@ const createTheme = (): any => ({
       ship: {
         borderColor: darkestGrey,
       },
-    }
+    },
   },
   ship: {
     block: {

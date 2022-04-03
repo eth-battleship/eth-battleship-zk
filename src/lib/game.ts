@@ -4,11 +4,44 @@ import { ChainInfo } from './chain'
 
 
 export enum GameState {
+  UNKNOWN = -1,
   NEED_OPPONENT = 0,
   PLAYER1_TURN = 1,
   PLAYER2_TURN = 2,
-  REVEAL = 3,
-  OVER = 4,
+  REVEAL_BOARD = 3,
+  ENDED = 4,
+}
+
+export interface Position {
+  x: number,
+  y: number,
+}
+
+export interface ShipConfig {
+  id: number,
+  position: Position,
+  length: number,
+  isVertical: boolean,
+  color?: string,
+}
+
+export interface PlayerData {
+  gameId: string,
+  player: string,
+  ships: ShipConfig[],
+  moves: Position[],
+}
+
+export interface GameData {
+  id: number,
+  boardLength: number,
+  player1: string,
+  player2?: string,
+  players: PlayerData[]
+  winner?: string,
+  totalRounds?: number,
+  created?: number,
+  status: GameState,
 }
 
 export const getShipColor = (length: number): string => {
@@ -31,16 +64,18 @@ export const getShipColor = (length: number): string => {
   }
 }
 
-export interface Position {
-  x: number,
-  y: number,
+export const getPlayerColor = (playerNumber: number): string => {
+  return 1 === playerNumber ? '#6fbd96' : '#9993e9'
 }
 
-export interface ShipConfig {
-  id: number,
-  position: Position,
-  length: number,
-  isVertical: boolean,
+
+export const applyColorsToShips = (ships: ShipConfig[], playerNumber?: number): ShipConfig[] => {
+  return ships.map(ship => {
+    return {
+      ...ship,
+      color: playerNumber ? getPlayerColor(playerNumber) : getShipColor(ship.length)
+    }
+  })
 }
 
 export const calculateShipEndPoint = (ship: ShipConfig): Position => {
@@ -128,3 +163,5 @@ export const createPlayerDataId = (authSig: string, id: any): string => {
 export const createGameId = (chain: ChainInfo, id: any): string => {
   return `${id}-${chain.genesisBlockHash!}`
 }
+
+

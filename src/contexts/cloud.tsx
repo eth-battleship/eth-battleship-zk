@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { initializeApp } from 'firebase/app'
-import { getFirestore, onSnapshot, doc, setDoc, Firestore, Unsubscribe } from 'firebase/firestore'
+import { getFirestore, onSnapshot, doc, getDoc, setDoc, Firestore, Unsubscribe } from 'firebase/firestore'
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { useAsyncEffect } from 'use-async-effect'
 import { useGlobal } from '../hooks'
-import { createGameId, createPlayerDataId, GameState, ShipConfig } from '../lib/game'
+import { createGameId, createPlayerDataId, GameData, GameState, PlayerData, ShipConfig } from '../lib/game'
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPEb5ujsgWNd_7iQQBtymjmptGp9fim9Y",
@@ -17,15 +17,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-export interface GameCloudData {
+export interface CloudGameData extends GameData {
   id: number,
+  boardLength: number,
   player1: string,
   player2?: string,
   status: GameState,
   created: number,
+  updateCount: number,
 }
 
-export type OnWatchGameHandler = (game: GameCloudData) => void
+export type OnWatchGameHandler = (game: CloudGameData) => void
 
 export interface CloudGameWatcher {
   inputId: any,
@@ -35,7 +37,8 @@ export interface CloudGameWatcher {
 export interface CloudContextValue {
   connected: boolean,
   connectError: string,
-  addNewGame: (id: any, ships: ShipConfig[]) => Promise<void>,
+  addNewGame: (id: any, boardLength: number, ships: ShipConfig[]) => Promise<void>,
+  loadPlayerData: (id: any) => Promise<PlayerData | undefined>
   watchGame: (id: any, callback: OnWatchGameHandler) => CloudGameWatcher
 }
 
@@ -65,27 +68,46 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       await signInAnonymously(auth)
     } catch (err: any) {
       console.error(err)
-      setConnectError(`Error connecting to Firestore: ${err.message}`)
+      setConnectError(`Error connecting to Firestore: ${err.meviewssage}`)
     }
   }, [])
 
-  const addNewGame = useCallback(async (id: any, ships: ShipConfig[]) => {
+  const addNewGame = useCallback(async (id: any, boardLength: number, ships: ShipConfig[]) => {
+    const gameId = createGameId(currentChain!, id)
+
     await Promise.all([
-      setDoc(doc(db!, 'games', createGameId(currentChain!, id)), {
+      setDoc(doc(db!, 'games', gameId), {
         id,
         chain: currentChain?.chainId,
+        boardLength,
         player1: account,
         status: GameState.NEED_OPPONENT,
         created: Date.now(),
-        updated: [],
+        updateCount: 1,
       }),
-      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), { ships })
+      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), { 
+        gameId,
+        player: account,
+        ships,
+        moves: [],
+      })
     ])
   }, [account, authSig, currentChain, db])
 
+  const loadPlayerData = useCallback(async (id: any) => {
+    const docSnap = await getDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)))
+    if (docSnap.exists()) {
+      return docSnap.data() as PlayerData
+    } else {
+      return undefined
+    }
+  }, [authSig, db])
+
   const watchGame = useCallback((id: any, callback: OnWatchGameHandler) => {
+    // load player data
+
     const unsub = onSnapshot(doc(db!, 'games', createGameId(currentChain!, id)), doc => {
-      callback(doc.data() as GameCloudData)
+      callback(doc.data() as CloudGameData)
     })
 
     return { unsub, inputId: id }
@@ -97,6 +119,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       connected,
       addNewGame,
       watchGame,
+      loadPlayerData,
     }}>
       {children}
     </CloudContext.Provider>

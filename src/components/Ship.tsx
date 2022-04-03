@@ -2,7 +2,7 @@ import styled from '@emotion/styled'
 import React, { useCallback } from 'react'
 import { useMemo } from 'react'
 
-import { getShipColor, ShipConfig } from '../lib/game'
+import { ShipConfig } from '../lib/game'
 
 const Table = styled.table`
   border: 0;
@@ -33,7 +33,7 @@ export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize,
           key={i}
           style={{
             display: ship.isVertical ? 'block': 'inline-block',
-            backgroundColor: getShipColor(ship.length),
+            backgroundColor: ship.color,
             width: blockSize,
             height: blockSize,
             cursor: disabled ? 'default' : 'pointer',
@@ -47,7 +47,7 @@ export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize,
     }
 
     return ship.isVertical ? cols : <tr>{cols}</tr>
-  }, [blockSize, disabled, onClick, ship.isVertical, ship.length])
+  }, [blockSize, disabled, onClick, ship.color, ship.isVertical, ship.length])
 
   return (
     <Table className={className}>

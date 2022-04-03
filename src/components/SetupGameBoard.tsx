@@ -1,6 +1,6 @@
 import styled from '@emotion/styled'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { getShipColor, Position, shipCanBePlaced, ShipConfig } from '../lib/game'
+import { applyColorsToShips, getShipColor, Position, shipCanBePlaced, ShipConfig } from '../lib/game'
 import { flex } from 'emotion-styled-utils'
 
 // import GameBoard from './GameBoard'
@@ -79,7 +79,7 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
   const [placedShips, setPlacedShips] = useState<Record<number, ShipConfig>>({})
 
   const ships: ShipConfig[] = useMemo(() => {
-    return shipLengths.map((length, index) => {
+    const uncolored = shipLengths.map((length, index) => {
       // if ship not placed
       if (placedShips[index]) {
         return placedShips[index]
@@ -95,6 +95,8 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
         }
       }
     })
+
+    return applyColorsToShips(uncolored)
   }, [placedShips, shipLengths])
 
   const onSelectPos: OnCellClickHandler = useCallback((position: Position, shipOnCell?: ShipConfig) => {

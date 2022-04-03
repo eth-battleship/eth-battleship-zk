@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import React, { useCallback, useMemo } from 'react'
 import { useState } from 'react'
 
-import { getShipColor, Position, ShipConfig, shipSitsOn } from '../lib/game'
+import { Position, ShipConfig, shipSitsOn } from '../lib/game'
 import { CssStyle } from './interfaces'
 
 const Table = styled.table`
@@ -23,9 +23,10 @@ export type StyleDecorator = (cellPos: Position, hover: Position, baseStyles: Cs
 export type OnCellClickHandler = (pos: Position, shipOnCell?: ShipConfig) => void
 
 interface Props {
+  className?: string,
   boardLength: number,
   ships: ShipConfig[],
-  onPress: OnCellClickHandler,
+  onPress?: OnCellClickHandler,
   styleDecorator?: StyleDecorator,
   cellContentRenderer?: (cellPos: Position) => any,
 }
@@ -57,7 +58,7 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
     let style: CssStyle = {}
 
     if (0 <= cellPosInshipOnCell) {
-      style.backgroundColor = getShipColor(shipOnCell!.length)
+      style.backgroundColor = shipOnCell!.color!
       style.border = `2px solid ${theme.gameBoard.cell.ship.borderColor}`
 
       switch (cellPosInshipOnCell) {
@@ -83,7 +84,7 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
     return style
   }, [shipOnCell, cell, cellPosInshipOnCell, hover, styleDecorator, theme.gameBoard.cell.ship.borderColor])
 
-  const onClick = useCallback(() => onPress(cell, shipOnCell), [shipOnCell, cell, onPress])
+  const onClick = useCallback(() => onPress && onPress(cell, shipOnCell), [shipOnCell, cell, onPress])
   const onMouseOver = useCallback(() => onHover(cell), [cell, onHover])
   const onMouseOut = useCallback(() => onHover({ x: -1, y: - 1}), [onHover])
 
@@ -99,7 +100,7 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
   )
 }
 
-const GameBoard: React.FunctionComponent<Props> = (props) => {
+const GameBoard: React.FunctionComponent<Props> = ({ className, ...props }) => {
   const { boardLength } = props
   
   const [ hover, setHover ] = useState<Position>({ x: -1, y: -1 })
@@ -132,7 +133,7 @@ const GameBoard: React.FunctionComponent<Props> = (props) => {
 
 
   return (
-    <Table>
+    <Table className={className}>
       <tbody>
         {cells}
       </tbody>
