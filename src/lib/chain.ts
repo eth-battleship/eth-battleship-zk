@@ -12,6 +12,7 @@ export interface ChainInfo {
   rpcUrls: string[];
   blockExplorerUrls?: string[];
   iconUrls?: string[]; // Currently ignored.
+  genesisBlockHash?: string,
 }
 
 export const NETWORKS: Record<string, ChainInfo> = {

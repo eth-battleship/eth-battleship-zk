@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs, doc, setDoc, Firestore } from 'firebase/firestore/lite'
+import { getFirestore, onSnapshot, doc, setDoc, Firestore, Unsubscribe } from 'firebase/firestore'
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { useAsyncEffect } from 'use-async-effect'
 import { useGlobal } from '../hooks'
-import { GameState, ShipConfig } from '../lib/game'
+import { createGameId, createPlayerDataId, GameState, ShipConfig } from '../lib/game'
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPEb5ujsgWNd_7iQQBtymjmptGp9fim9Y",
@@ -17,16 +17,32 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
+export interface GameCloudData {
+  id: number,
+  player1: string,
+  player2?: string,
+  status: GameState,
+  created: number,
+}
+
+export type OnWatchGameHandler = (game: GameCloudData) => void
+
+export interface CloudGameWatcher {
+  inputId: any,
+  unsub: Unsubscribe,
+}
+
 export interface CloudContextValue {
   connected: boolean,
   connectError: string,
   addNewGame: (id: any, ships: ShipConfig[]) => Promise<void>,
+  watchGame: (id: any, callback: OnWatchGameHandler) => CloudGameWatcher
 }
 
 export const CloudContext = React.createContext({} as CloudContextValue);
 
 export const CloudProvider: React.FunctionComponent = ({ children }) => {
-  const { genesisBlockHash, account } = useGlobal()
+  const { account, authSig, currentChain } = useGlobal()
   const [ db, setDb ] = useState<Firestore>()
   const [ connectError, setConnectError ] = useState<string>('')
   const [ connected, setConnected ] = useState<boolean>(false)
@@ -54,27 +70,33 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
   }, [])
 
   const addNewGame = useCallback(async (id: any, ships: ShipConfig[]) => {
-    if (!db) {
-      throw new Error('DB not initialised')
-    }
-
     await Promise.all([
-      await setDoc(doc(db, 'games', id.toString()), {
+      setDoc(doc(db!, 'games', createGameId(currentChain!, id)), {
         id,
-        genesisBlock: genesisBlockHash,
+        chain: currentChain?.chainId,
         player1: account,
         status: GameState.NEED_OPPONENT,
         created: Date.now(),
         updated: [],
-      })
+      }),
+      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), { ships })
     ])
-  }, [account, db, genesisBlockHash])
+  }, [account, authSig, currentChain, db])
+
+  const watchGame = useCallback((id: any, callback: OnWatchGameHandler) => {
+    const unsub = onSnapshot(doc(db!, 'games', createGameId(currentChain!, id)), doc => {
+      callback(doc.data() as GameCloudData)
+    })
+
+    return { unsub, inputId: id }
+  }, [currentChain, db])
 
   return (
     <CloudContext.Provider value={{
       connectError, 
       connected,
       addNewGame,
+      watchGame,
     }}>
       {children}
     </CloudContext.Provider>

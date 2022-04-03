@@ -27,7 +27,7 @@ const SubmitButton = styled(Button)`
   margin-bottom: 0.5rem;
 `
 
-const CreateGame: React.FunctionComponent = () => {
+const Page: React.FunctionComponent = () => {
   const navigate = useNavigate()
 
   const { addNewGame } = useCloud()
@@ -81,7 +81,7 @@ const CreateGame: React.FunctionComponent = () => {
   }, [addNewGame, contract, contractCall, navigate, progress, ships])
 
   return (
-    <Layout>
+    <React.Fragment>
       <H1>Create game</H1>
       <p>Place your ships below on the board.</p>
       <StyledSetupGameBoard
@@ -103,6 +103,14 @@ const CreateGame: React.FunctionComponent = () => {
           <ErrorBox>{progress.error}</ErrorBox>
         ) : null}
       </div>
+    </React.Fragment>
+  )
+}
+
+const CreateGame: React.FunctionComponent = () => {
+  return (
+    <Layout>
+      <Page />
     </Layout>
   )
 }

@@ -1,10 +1,14 @@
+import { SHA3 } from 'sha3'
 import { hexlify } from '@ethersproject/bytes'
+import { ChainInfo } from './chain'
+
 
 export enum GameState {
   NEED_OPPONENT = 0,
   PLAYER1_TURN = 1,
   PLAYER2_TURN = 2,
-  REVEAL = 3
+  REVEAL = 3,
+  OVER = 4,
 }
 
 export const getShipColor = (length: number): string => {
@@ -117,3 +121,10 @@ export const shipsToBytesHex = (ships: ShipConfig[]): string => {
 
 export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)
 
+export const createPlayerDataId = (authSig: string, id: any): string => {
+  return new SHA3(512).update(authSig).update(id.toString()).digest('hex')
+}
+
+export const createGameId = (chain: ChainInfo, id: any): string => {
+  return `${id}-${chain.genesisBlockHash!}`
+}

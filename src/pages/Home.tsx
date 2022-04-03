@@ -4,7 +4,7 @@ import Button from '../components/Button'
 
 import Layout from '../components/Layout'
 
-const Home: React.FunctionComponent = () => {
+const Page: React.FunctionComponent = () => {
   const navigate = useNavigate()
 
   const createGame = useCallback(async () => {
@@ -12,8 +12,16 @@ const Home: React.FunctionComponent = () => {
   }, [navigate])
 
   return (
-    <Layout>
+    <React.Fragment>
       <Button onClick={createGame}>Create game</Button>
+    </React.Fragment>
+  )
+}
+
+const Home: React.FunctionComponent = () => {
+  return (
+    <Layout>
+      <Page />
     </Layout>
   )
 }

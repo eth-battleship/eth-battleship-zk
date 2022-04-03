@@ -45,7 +45,6 @@ export interface GlobalContextValue {
   authSig: string,
   expectedChain: ChainInfo,
   currentChain: ChainInfo | undefined,
-  genesisBlockHash: string,
   unsupportedChain: boolean,
 }
 
@@ -69,8 +68,10 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
       setCanonicalChainId(null)
       const chainIdHexString = await library?.send('eth_chainId', [])
       setCanonicalChainId(chainIdHexString ? parseInt(chainIdHexString, 16) : null)
-      const { hash } = (await library?.getBlock(0))!
-      setGenesisBlockHash(hash)
+      const blockData = await library?.getBlock(0)
+      if (blockData) {
+        setGenesisBlockHash(blockData.hash)
+      }
     } catch (err) {
       console.error(`Error resolving canonical chain id and genesis block`, err)
     }
@@ -78,8 +79,12 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
 
   // current chain
   const currentChain = useMemo(() => {
-    return Object.values(NETWORKS).find(({ chainId }) => chainId === canonicalChainId)
-  }, [canonicalChainId])
+    const c = Object.values(NETWORKS).find(({ chainId }) => chainId === canonicalChainId)
+    if (c) {
+      c.genesisBlockHash = genesisBlockHash
+    }
+    return c
+  }, [canonicalChainId, genesisBlockHash])
 
   // get auth signature
   useAsyncEffect(async () => {
@@ -121,7 +126,6 @@ export const GlobalProvider: React.FunctionComponent = ({ children }) => {
       authSig,
       expectedChain,
       currentChain,
-      genesisBlockHash,
       unsupportedChain,
     }}>
       {children}
