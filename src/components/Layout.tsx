@@ -4,10 +4,11 @@ import { Link } from 'react-router-dom'
 import { flex } from 'emotion-styled-utils'
 
 import WalletInfo from './WalletInfo'
-import { Connected, ConnectedContainer, NotConnected } from './ConnectedContainer'
+import { CloudConnectionError, CloudNotConnected, Connected, ConnectedContainer, WalletNotConnected } from './ConnectedContainer'
 import { useGlobal } from '../hooks'
 import ErrorBox from './ErrorBox'
 import MaxContentWidth from './MaxContentWidth'
+import ProgressBox from './ProgressBox'
 
 
 export const headerHeight = '100px'
@@ -61,6 +62,10 @@ const Footer = styled.footer`
   text-align: center;
 `
 
+const StyledProgressBox = styled(ProgressBox)`
+  margin-top: 1rem;
+`
+
 
 const Layout: React.FunctionComponent = ({ children }) => {
   const { expectedChain } = useGlobal()
@@ -76,11 +81,15 @@ const Layout: React.FunctionComponent = ({ children }) => {
       <Content>
         <ConnectedContainer>
           <Connected>{children}</Connected>
-          <NotConnected>
+          <WalletNotConnected>
             <ErrorBox>
               Please connect your Ethereum wallet to {expectedChain.chainName} to view this page ↗
             </ErrorBox>
-          </NotConnected>
+          </WalletNotConnected>
+          <CloudNotConnected>
+            <StyledProgressBox>Waiting to connect to cloud...</StyledProgressBox>
+            <CloudConnectionError />
+          </CloudNotConnected>
         </ConnectedContainer>
       </Content>
       <Footer>

@@ -44,7 +44,7 @@ const createTheme = (): any => ({
       hoverBgColor: linkColor,
     },
   },
-  progressTextBox: {
+  progressBox: {
     bgColor: lighterGrey,
     textColor: black,
   },

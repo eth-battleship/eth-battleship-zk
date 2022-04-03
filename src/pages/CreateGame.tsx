@@ -5,7 +5,7 @@ import Button from '../components/Button'
 import ErrorBox from '../components/ErrorBox'
 
 import Layout from '../components/Layout'
-import ProgressTextBox from '../components/ProgressTextBox'
+import ProgressBox from '../components/ProgressBox'
 import SetupGameBoard from '../components/SetupGameBoard'
 import SuccessBox from '../components/SuccessBox'
 import { useContract, useContractFunctionV2, useProgress } from '../hooks'
@@ -63,11 +63,13 @@ const CreateGame: React.FunctionComponent = () => {
 
       newGameId = extractNewGameIdFromTxReceipt(receipt)
 
-      console.log(newGameId)
+      console.log(`New game id: ${newGameId}`)
+
+      navigate(`/view/${newGameId}`)
     })
 
     await flow.run()
-  }, [contract, contractCall, progress, ships])
+  }, [contract, contractCall, navigate, progress, ships])
 
   return (
     <Layout>
@@ -79,13 +81,14 @@ const CreateGame: React.FunctionComponent = () => {
         onChange={setShips}
       />
       <SubmitButton 
-        disabled={!canSubmit || progress.inProgress} 
+        disabled={!canSubmit} 
+        loading={progress.inProgress}
         onClick={createGame}
       >
-        {progress.inProgress ? 'Creating....' : 'Create'}
+        Create
       </SubmitButton>
       <div>
-        {progress.activeStep ? <ProgressTextBox>{(progress.activeStep as string)}</ProgressTextBox> : null}
+        {progress.activeStep ? <ProgressBox>{(progress.activeStep as string)}</ProgressBox> : null}
         {progress.completed ? <SuccessBox>Game created ✅</SuccessBox> : null}
         {progress.error ? (
           <ErrorBox>{progress.error}</ErrorBox>
