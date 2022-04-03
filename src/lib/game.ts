@@ -1,3 +1,5 @@
+import { hexlify } from '@ethersproject/bytes'
+
 export const getShipColor = (length: number): string => {
   switch (length) {
     case 5: {
@@ -94,3 +96,17 @@ export const shipCanBePlaced = (boardLength: number, existingShips: ShipConfig[]
     return m || linesIntersect(newShip.position, newShipEndPoint, existingShip.position, existingShipEndPoint)
   }, false)
 }
+
+
+export const shipsToBytesHex = (ships: ShipConfig[]): string => {
+  const bytes: number[] = []
+
+  ships.forEach(({ position, isVertical }) => {
+    bytes.push(position.x, position.y, isVertical ? 1 : 0)
+  })
+
+  return hexlify(bytes)
+}
+
+export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)
+

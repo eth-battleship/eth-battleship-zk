@@ -1,5 +1,5 @@
 import styled from '@emotion/styled'
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { getShipColor, Position, shipCanBePlaced, ShipConfig } from '../lib/game'
 import { flex } from 'emotion-styled-utils'
 
@@ -10,7 +10,7 @@ import { useTheme } from '@emotion/react'
 import { CssStyle } from './interfaces'
 
 const Container = styled.div`
-  ${flex({ direction: 'row', justify: 'center', align: 'center' })};
+  ${flex({ direction: 'row', justify: 'flex-start', align: 'center' })};
 `
 
 const ShipSelectorContainer = styled.div`
@@ -74,9 +74,7 @@ const ShipSelector: React.FunctionComponent<ShipSelectorProps> = ({ ships, selec
   )
 }
 
-export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boardLength, shipLengths }) => {
-  const theme: any = useTheme()
-  
+export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boardLength, shipLengths, onChange }) => {
   const [selectedShip, setSelectedShip] = useState<ShipConfig>()
   const [placedShips, setPlacedShips] = useState<Record<number, ShipConfig>>({})
 
@@ -122,8 +120,9 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
 
     if (update) {
       setPlacedShips({ ...placedShips })
+      onChange(Object.values(placedShips))
     }
-  }, [boardLength, placedShips, selectedShip, ships])
+  }, [boardLength, onChange, placedShips, selectedShip, ships])
 
   const styleDecorator: StyleDecorator = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => {
     // if hovering over this cell
@@ -133,7 +132,7 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
         // if ship can be placed there
         if (shipCanBePlaced(boardLength, ships, { ...selectedShip, position: cellPos })) {
           // highlight as potential placing point
-          baseStyles.backgroundColor = theme.gameBoard.cell.highlight.bgColor
+          baseStyles.backgroundColor = getShipColor(selectedShip.length)
           baseStyles.cursor = 'pointer'
         } else {
           // disable click
@@ -143,7 +142,7 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
     } 
 
     return baseStyles
-  }, [boardLength, selectedShip, ships, theme.gameBoard.cell.highlight.bgColor])
+  }, [boardLength, selectedShip, ships])
 
   return (
     <Container className={className}>

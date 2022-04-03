@@ -11,6 +11,9 @@ export interface UseProgressHook {
   reset: ()=> void,
 }
 
+/**
+ * Asynchronous action progress indicator.
+ */
 export const useProgress = (): UseProgressHook => {
   const [inProgress, setInProgressState] = useState<boolean>()
   const [activeStep, setActiveStepState] = useState<any>()

@@ -10,6 +10,7 @@ import {
   color6,
   lighterGrey,
   darkestGrey,
+  color4,
 } from './colors'
 
 const bgColor = white
@@ -43,6 +44,14 @@ const createTheme = (): any => ({
       hoverBgColor: linkColor,
     },
   },
+  progressTextBox: {
+    bgColor: lighterGrey,
+    textColor: black,
+  },
+  successBox: {
+    bgColor: color4,
+    textColor: black,
+  },
   tooltip: {
     bgColor: black,
     textColor: white,
@@ -67,9 +76,6 @@ const createTheme = (): any => ({
     borderColor: black,
     cell: {
       borderColor: darkGrey,
-      highlight: {
-        bgColor: lightGrey,
-      },
       ship: {
         borderColor: darkestGrey,
       },

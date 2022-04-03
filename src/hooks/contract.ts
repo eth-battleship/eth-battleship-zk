@@ -1,12 +1,10 @@
+import { TransactionReceipt } from '@ethersproject/providers'
 import { Contract } from "@ethersproject/contracts"
 import { TransactionOptions, useContractFunction, useEthers } from "@usedapp/core"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { ADDRESSES, ABI } from "../lib/contract"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useGlobal, useProgress, UseProgressHook } from "./"
-
-const ABI = require('../contracts/abi.json')
-const ADDRESSES = require('../contracts/addresses.json')
-
 
 type UseContractHook = Contract
 
@@ -20,7 +18,7 @@ export const useContract = (): UseContractHook => {
     if (!ADDRESSES[currentChain.chainId]) {
       throw new Error(`Contract address not found for network: ${currentChain.chainName}`)
     }
-    return ADDRESSES[currentChain.chainId]
+    return ADDRESSES[currentChain.chainId].Battleship
   }, [currentChain])
   const contract = useMemo(() => {
     return new Contract(address, ABI, library)
@@ -29,7 +27,7 @@ export const useContract = (): UseContractHook => {
 }
 
 interface UseContractFunctionV2Hook {
-  exec: (...args: any[]) => Promise<unknown>,
+  exec: (...args: any[]) => Promise<TransactionReceipt>,
   progress: UseProgressHook,
 }
 
@@ -60,7 +58,7 @@ export const useContractFunctionV2 = (opts: UseContractFunctionV2Input): UseCont
 
   const [promiseResolvers, setPromiseResolvers] = useState<PromiseResolvers>()
 
-  const exec = useCallback(async (...args) => {
+  const exec = useCallback(async (...args): Promise<TransactionReceipt> => {
     resetState()
     progress.reset()
 
@@ -82,7 +80,7 @@ export const useContractFunctionV2 = (opts: UseContractFunctionV2Input): UseCont
     } else if (completed || error) {
       if (completed) {
         progress.setCompleted()
-        promiseResolvers?.resolve(undefined)
+        promiseResolvers?.resolve(state.receipt)
       } if (error) {
         progress.setError(error)
         promiseResolvers?.reject(error)
@@ -90,7 +88,7 @@ export const useContractFunctionV2 = (opts: UseContractFunctionV2Input): UseCont
 
       setPromiseResolvers(undefined)
     }
-  }, [completed, error, mining, progress, promiseResolvers])
+  }, [completed, error, mining, progress, promiseResolvers, state.receipt])
 
   return {
     exec,
