@@ -70,7 +70,7 @@ const Page: React.FunctionComponent = () => {
     })
 
     flow.add('Adding to cloud', async () => {
-      await addNewGame(newGameId, BOARD_LENGTH, ships)
+      await addNewGame(newGameId, BOARD_LENGTH, NUM_ROUNDS, ships)
     })
 
     flow.add('Navigating to game screen', async () => {

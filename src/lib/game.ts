@@ -36,20 +36,28 @@ export interface PlayerData {
 export interface BaseGameData {
   id: number,
   boardLength: number,
+  totalRounds: number,
   player1: string,
   player2?: string,
   players: Record<number, PlayerData>,
   status: GameState,
 }
 
+export interface CloudPlayerData extends PlayerData {
+  updateCount: number,
+}
+
 export interface CloudGameData extends BaseGameData {
+  player1Moves?: Position,
+  player1Hits?: boolean[],
+  player2Moves?: Position[],
+  player2Hits?: boolean[],
   created: number,
   updateCount: number,
 }
 
 export interface ContractGameData extends BaseGameData {
   shipLengths: number[],
-  totalRounds: number,
   winner?: string,
 }
 
@@ -80,6 +88,8 @@ export const getPlayerColor = (playerNumber: number): string => {
   return 1 === playerNumber ? '#6fbd96' : '#9993e9'
 }
 
+export const getOpponentNum = (playerNum: number) => (1 === playerNum) ? 2 : 1
+
 
 export const applyColorsToShips = (ships: ShipConfig[], playerNumber?: number): ShipConfig[] => {
   return ships.map(ship => {
@@ -88,6 +98,10 @@ export const applyColorsToShips = (ships: ShipConfig[], playerNumber?: number): 
       color: playerNumber ? getPlayerColor(playerNumber) : getShipColor(ship.length)
     }
   })
+}
+
+export const positionsMatch = (pos1: Position, pos2: Position) => {
+  return pos1.x === pos2.x && pos1.y === pos2.y
 }
 
 export const calculateShipEndPoint = (ship: ShipConfig): Position => {
@@ -170,6 +184,10 @@ export const bytesHexToShips = (shipsBytesHex: string, shipLengths: number[]): S
   const bytes: number[] = Array.from(arrayify(shipsBytesHex))
   const ships: ShipConfig[] = []
 
+  if (bytes.length < 3) {
+    return ships
+  }
+
   for(let i = 0; i<bytes.length; i += 3) {
     const id = i / 3
 
@@ -200,6 +218,10 @@ export const movesToBytesHex = (moves: Position[]): string => {
 export const bytesHexToMoves = (movesHex: string): Position[] => {
   const bytes: number[] = Array.from(arrayify(movesHex))
   const moves: Position[] = []
+
+  if (bytes.length < 2) {
+    return moves
+  }
 
   for (let i = 0; i < bytes.length; i += 2) {
     moves.push({

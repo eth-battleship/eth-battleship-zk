@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
-import { CloudGameData, CloudGameWatcher } from "../contexts"
-import { applyColorsToShips, bytesHexToMoves, bytesHexToShipLengths, bytesHexToShips, ContractGameData, GameData, GameState, PlayerData } from "../lib/game"
+import { CloudWatcher } from "../contexts"
+import { applyColorsToShips, bytesHexToMoves, bytesHexToShipLengths, bytesHexToShips, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData } from "../lib/game"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useCloud, useGlobal } from "./contexts"
 import { useContract } from "./contract"
 
 export interface UseGameHook {
-  game: CloudGameData | undefined,
+  game: GameData | undefined,
   currentUserIsPlayer?: number,
   error?: string,
 }
@@ -17,11 +17,12 @@ export interface UseGameHook {
  * Asynchronous action progress indicator.
  */
 export const useGame = (gameId?: number): UseGameHook => {
-  const { watchGame, loadPlayerData } = useCloud()
+  const { watchGame, watchPlayerData } = useCloud()
   const { account } = useGlobal()
-  const [watcher, setWatcher] = useState<CloudGameWatcher>()
+  const [playerDataWatcher, setPlayerDataWatcher] = useState<CloudWatcher>()
+  const [gameWatcher, setGameWatcher] = useState<CloudWatcher>()
   const [cloudGameData, setCloudGameData] = useState<CloudGameData>()
-  const [cloudPlayerData, setCloudPlayerData] = useState<PlayerData>()
+  const [cloudPlayerData, setCloudPlayerData] = useState<CloudPlayerData>()
   const [contractGameData, setContractGameData] = useState<ContractGameData>()
   const [error, setError] = useState<string>()
 
@@ -32,33 +33,42 @@ export const useGame = (gameId?: number): UseGameHook => {
     }
   }, [cloudGameData])
 
-  // load cloud player data
-  useEffect(() => {    
-    // dont repeat work
-    if (gameId && !cloudPlayerData) {
-      loadPlayerData(gameId).then(data => {
-        if (data) {
-          setCloudPlayerData(data)
-        }
-      })
+  // when cloud player data gets updated
+  const onUpdateCloudPlayerData = useCallback(async (pd: CloudPlayerData) => {
+    if (!cloudPlayerData || pd.updateCount > cloudPlayerData.updateCount) {
+      setCloudPlayerData(pd)
     }
-  }, [cloudPlayerData, gameId, loadPlayerData])
+  }, [cloudPlayerData])
 
-  // load cloud game data
+  // watchers
   useEffect(() => {
-    if (!watcher || watcher.inputId !== gameId) {
-      if (watcher) {
-        watcher.unsub()
-        setWatcher(undefined)
+    if (!gameWatcher || gameWatcher.inputId !== gameId) {
+      if (gameWatcher) {
+        gameWatcher.unsub()
+        setGameWatcher(undefined)
       }
 
       setCloudGameData(undefined)
 
       if (gameId) {
-        setWatcher(watchGame(gameId, onUpdateCloudGame))
+        setGameWatcher(watchGame(gameId, onUpdateCloudGame))
       }
     }
-  }, [gameId, onUpdateCloudGame, watchGame, watcher])
+  }, [gameId, gameWatcher, onUpdateCloudGame, watchGame])
+  useEffect(() => {
+    if (!playerDataWatcher || playerDataWatcher.inputId !== gameId) {
+      if (playerDataWatcher) {
+        playerDataWatcher.unsub()
+        setPlayerDataWatcher(undefined)
+      }
+
+      setCloudPlayerData(undefined)
+
+      if (gameId) {
+        setPlayerDataWatcher(watchPlayerData(gameId, onUpdateCloudPlayerData))
+      }
+    }
+  }, [gameId, onUpdateCloudPlayerData, playerDataWatcher, watchPlayerData])
 
   // load contract game data
   const contract = useContract()
@@ -175,7 +185,7 @@ export const useGame = (gameId?: number): UseGameHook => {
               game.players[1].moves = cloudPlayerData.moves
             }
           }
-        } else {
+        } else if (currentUserIsPlayer === 2) {
           if (game.players[2]) {
             if (!game.players[2].ships.length) {
               game.players[2].ships = applyColorsToShips(cloudPlayerData.ships, 2)
@@ -186,6 +196,10 @@ export const useGame = (gameId?: number): UseGameHook => {
           }
         }
       }
+
+      game.player1Hits = game.player1Hits || []
+      game.player2Hits = game.player2Hits || []
+
       return game
     } else {
       return undefined

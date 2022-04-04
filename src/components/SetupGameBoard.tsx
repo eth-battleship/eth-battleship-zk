@@ -1,12 +1,11 @@
 import styled from '@emotion/styled'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyColorsToShips, getShipColor, Position, shipCanBePlaced, ShipConfig } from '../lib/game'
 import { flex } from 'emotion-styled-utils'
 
 // import GameBoard from './GameBoard'
+import { applyColorsToShips, getShipColor, Position, positionsMatch, shipCanBePlaced, ShipConfig } from '../lib/game'
 import Ship from './Ship'
-import GameBoard, { OnCellClickHandler, StyleDecorator } from './GameBoard'
-import { useTheme } from '@emotion/react'
+import GameBoard, { OnCellClickHandler, CellRenderer, CellRendererResult } from './GameBoard'
 import { CssStyle } from './interfaces'
 
 const Container = styled.div`
@@ -126,33 +125,35 @@ export const SetupGameBoard: React.FunctionComponent<Props> = ({ className, boar
     }
   }, [boardLength, onChange, placedShips, selectedShip, ships])
 
-  const styleDecorator: StyleDecorator = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => {
+  const cellRenderer: CellRenderer = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => {
+    const ret: CellRendererResult = {
+      style: { ...baseStyles }
+    }
+
     // if hovering over this cell
-    if (hover.x === cellPos.x && hover.y === cellPos.y) {
+    if (positionsMatch(cellPos, hover)) {
       // if ship ready to place and no ship on cell
       if (selectedShip && !shipOnCell) {
         // if ship can be placed there
         if (shipCanBePlaced(boardLength, ships, { ...selectedShip, position: cellPos })) {
           // highlight as potential placing point
-          baseStyles.backgroundColor = getShipColor(selectedShip.length)
-          baseStyles.cursor = 'pointer'
-        } else {
-          // disable click
-          baseStyles.pointerEvents = 'none'
+          ret.style.backgroundColor = getShipColor(selectedShip.length)
+          ret.style.cursor = 'pointer'
+          // click handler
+          ret.onPress = onSelectPos
         }
       }
     } 
 
-    return baseStyles
-  }, [boardLength, selectedShip, ships])
+    return ret
+  }, [boardLength, onSelectPos, selectedShip, ships])
 
   return (
     <Container className={className}>
       <GameBoard 
         boardLength={boardLength} 
         ships={ships} 
-        onPress={onSelectPos}       
-        styleDecorator={styleDecorator}
+        cellRenderer={cellRenderer}
       />
       <ShipSelector
         ships={ships}

@@ -1,20 +1,19 @@
 import styled from '@emotion/styled'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useAsyncEffect  } from 'use-async-effect'
 import { flex } from 'emotion-styled-utils'
 
 import Button from '../components/Button'
 import ErrorBox from '../components/ErrorBox'
-import GameBoard from '../components/GameBoard'
+import GameBoard, { CellRendererResult } from '../components/GameBoard'
 import Layout from '../components/Layout'
 import ProgressBox from '../components/ProgressBox'
 import SetupGameBoard from '../components/SetupGameBoard'
 import SuccessBox from '../components/SuccessBox'
-import { CloudGameWatcher, CloudGameData } from '../contexts'
-import { useCloud, useContract, useContractFunctionV2, useGame, useGlobal, useProgress } from '../hooks'
+import { useCloud, useContract, useContractFunctionV2, useGame, useProgress } from '../hooks'
 import { Flow } from '../lib/flow'
-import { GameData, GameState, getPlayerColor, PlayerData, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
+import { CloudGameData, GameData, GameState, getOpponentNum, getPlayerColor, Position, positionsMatch, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
+import { CssStyle } from '../components/interfaces'
 
 const Container = styled.div`
   h1 {
@@ -78,7 +77,7 @@ const PlayerGameBoard = styled(GameBoard)`
 `
 
 interface JoinProps {
-  game: CloudGameData,
+  game: GameData,
 }
 
 const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
@@ -140,11 +139,28 @@ const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
       </div>
     </React.Fragment>
   )
+}
 
+interface PlayerMoveProps {
+  color?: string,
+  hit?: boolean,
+}
+
+const PlayerMoveDiv = styled.div`  
+  width: 100%;
+  height: 100%;
+  padding-top: 25%;
+  pointer-events: none;
+  background-color: ${(p: any) => p['data-hit'] ? p['data-color'] : 'transparent'};
+`
+
+const PlayerMove: React.FunctionComponent<PlayerMoveProps> = ({ color, hit }) => {
+  return <PlayerMoveDiv data-hit={hit} data-color={color}>💣</PlayerMoveDiv>
 }
 
 const Page: React.FunctionComponent = () => {
   const { gameId } = useParams()
+  const { playMove } = useCloud()
   const { game, error, currentUserIsPlayer } = useGame(gameId ? parseInt(gameId) : undefined)
 
   // rendering stuff....
@@ -154,19 +170,69 @@ const Page: React.FunctionComponent = () => {
       case GameState.NEED_OPPONENT:
         return 'Awaiting opponent'
       case GameState.PLAYER1_TURN:
-        return 'Player 1\'s turn'
+        return currentUserIsPlayer === 1 ? 'Your turn' : 'Player 1\'s turn'
       case GameState.PLAYER2_TURN:
-        return 'Player 2\'s turn'
+        return currentUserIsPlayer === 2 ? 'Your turn' : 'Player 2\'s turn'
       case GameState.REVEAL_BOARD:
         return 'Calculating winner'
       case GameState.ENDED:
         return 'Ended'
     }
-  }, [game?.status])
+  }, [currentUserIsPlayer, game?.status])
 
   const currentUserCanJoinAsOpponent = useMemo(() => {
     return game?.status === GameState.NEED_OPPONENT && !currentUserIsPlayer
   }, [currentUserIsPlayer, game?.status])
+
+  const currentUserPlayerTurn = useMemo(() => {
+    return (game?.status === GameState.PLAYER1_TURN && currentUserIsPlayer === 1)
+      || (game?.status === GameState.PLAYER2_TURN && currentUserIsPlayer === 2)
+  }, [currentUserIsPlayer, game?.status])
+
+  const buildOnSelectPosHandler = useCallback((boardPlayerNum: number) => (cellPos: Position) => {
+    playMove(gameId, cellPos)
+  }, [gameId, playMove])
+
+  const playerBoardCellRenderer = useCallback((playerNum: number, cellPos: Position, hover: Position, baseStyles: CssStyle) => {
+    const ret: CellRendererResult = {
+      style: { ...baseStyles }
+    }
+
+    const opponentPlayerNum = getOpponentNum(playerNum)
+
+    // display opponent hits
+    const moves = game?.players[opponentPlayerNum]?.moves || []
+    if (moves.length) {
+      const matchIndex = moves.findIndex((pos: Position) => positionsMatch(pos, cellPos))
+      if (0 <= matchIndex) {
+        const hit = (opponentPlayerNum === 1 && game?.player1Hits && game?.player1Hits[matchIndex]) 
+          || (opponentPlayerNum === 2 && game?.player2Hits && game?.player2Hits[matchIndex]) 
+        
+        ret.content = <PlayerMove color={getPlayerColor(opponentPlayerNum)} hit={hit} />
+      }
+    }
+
+    // if hovering and not already hit
+    if (positionsMatch(cellPos, hover) && !ret.content) {
+      // if current user is opponent and it's their turn
+      if (currentUserIsPlayer === opponentPlayerNum && currentUserPlayerTurn) {
+        // make the cell hittable
+        ret.content = <PlayerMove />
+        ret.style.cursor = 'pointer'
+        ret.onPress = buildOnSelectPosHandler(playerNum)
+      }
+    }
+
+    return ret
+  }, [buildOnSelectPosHandler, currentUserIsPlayer, currentUserPlayerTurn, game?.player1Hits, game?.player2Hits, game?.players])
+
+  const player1BoardCellRenderer = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle) => {
+    return playerBoardCellRenderer(1, cellPos, hover, baseStyles)
+  }, [playerBoardCellRenderer])
+
+  const player2BoardCellRenderer = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle) => {
+    return playerBoardCellRenderer(2, cellPos, hover, baseStyles)
+  }, [playerBoardCellRenderer])
 
   return (
     <Container>
@@ -188,6 +254,7 @@ const Page: React.FunctionComponent = () => {
                   <PlayerGameBoard
                     boardLength={game.boardLength}
                     ships={game.players[1].ships}
+                    cellRenderer={player1BoardCellRenderer}
                   />
                 </PlayerGameBoardDiv>
                 <PlayerGameBoardDiv>
@@ -195,6 +262,7 @@ const Page: React.FunctionComponent = () => {
                   <PlayerGameBoard
                     boardLength={game.boardLength}
                     ships={game.players[2] ? game.players[2].ships : []}
+                    cellRenderer={player2BoardCellRenderer}
                   />
                 </PlayerGameBoardDiv>
               </PlayerGameBoardsDiv>

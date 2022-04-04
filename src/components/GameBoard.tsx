@@ -19,16 +19,21 @@ const Table = styled.table`
   }
 `
 
-export type StyleDecorator = (cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => CssStyle
 export type OnCellClickHandler = (pos: Position, shipOnCell?: ShipConfig) => void
+
+export interface CellRendererResult {
+  style: CssStyle,
+  onPress?: OnCellClickHandler,
+  content?: any,
+}
+
+export type CellRenderer = (cellPos: Position, hover: Position, baseStyles: CssStyle, shipOnCell?: ShipConfig) => CellRendererResult
 
 interface Props {
   className?: string,
   boardLength: number,
   ships: ShipConfig[],
-  onPress?: OnCellClickHandler,
-  styleDecorator?: StyleDecorator,
-  cellContentRenderer?: (cellPos: Position) => any,
+  cellRenderer?: CellRenderer,
 }
 
 interface CellProps extends Props {
@@ -41,7 +46,7 @@ interface CellProps extends Props {
 const Cell: React.FunctionComponent<CellProps> = (props) => {
   const theme: any = useTheme()
   
-  const { cell, ships, cellContentRenderer, hover, styleDecorator, onPress, onHover } = props
+  const { cell, ships, cellRenderer, hover, onHover } = props
 
   const shipOnCell = useMemo(() => {
     return Object.values(ships).find(v => shipSitsOn(v, cell))
@@ -54,7 +59,7 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
     return (shipOnCell.isVertical ? (cell.x - shipOnCell.position.x) : (cell.y - shipOnCell.position.y)) + 1
   }, [shipOnCell, cell.x, cell.y])
 
-  const style = useMemo(() => {
+  const baseStyle = useMemo(() => {
     let style: CssStyle = {}
 
     if (0 <= cellPosInshipOnCell) {
@@ -77,16 +82,22 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
       }
     }
 
-    if (styleDecorator) {
-      style = styleDecorator(cell, hover, style, shipOnCell)
-    }
-
     return style
-  }, [shipOnCell, cell, cellPosInshipOnCell, hover, styleDecorator, theme.gameBoard.cell.ship.borderColor])
+  }, [shipOnCell, cellPosInshipOnCell, theme.gameBoard.cell.ship.borderColor])
+
+  const { content, style, onPress } = useMemo(() => {
+    if (cellRenderer) {
+      return cellRenderer(cell, hover, baseStyle, shipOnCell)
+    } else {
+      return {
+        style: baseStyle,
+      }
+    }
+  }, [baseStyle, cell, cellRenderer, hover, shipOnCell])
 
   const onClick = useCallback(() => onPress && onPress(cell, shipOnCell), [shipOnCell, cell, onPress])
   const onMouseOver = useCallback(() => onHover(cell), [cell, onHover])
-  const onMouseOut = useCallback(() => onHover({ x: -1, y: - 1}), [onHover])
+  const onMouseOut = useCallback(() => { onHover({ x: -1, y: - 1}) }, [onHover])
 
   return (
     <td
@@ -95,7 +106,7 @@ const Cell: React.FunctionComponent<CellProps> = (props) => {
       onMouseOver={onMouseOver}
       onMouseOut={onMouseOut}
     >
-      {cellContentRenderer ? cellContentRenderer(cell) : null}
+      {content || null}
     </td>
   )
 }
