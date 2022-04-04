@@ -2,11 +2,11 @@ import React, { useCallback, useMemo, useState } from 'react'
 import styled from '@emotion/styled'
 
 import Button from './Button'
-import ConnectModal from './ConnectModal'
 import DisconnectModal from './DisconnectModal'
 import SelectNetworkModal from './SelectNetworkModal'
 import { useGlobal } from '../hooks'
 import TruncatedAccount from './TruncatedAccount'
+import { useEthers } from '@usedapp/core'
 
 const Container = styled.div``
 
@@ -39,8 +39,8 @@ const GoodChain: React.FunctionComponent<GoodChainProps> = ({ connect, disconnec
 }
 
 const WalletInfo: React.FunctionComponent = () => {
+  const { activateBrowserWallet } = useEthers()
   const { unsupportedChain, account } = useGlobal()
-  const [ showConnectModal, setShowConnectModal ] = useState<boolean>(false)
   const [showDisconnectModal, setShowDisconnectModal ] = useState<boolean>(false)
   const [showSwitchNetworkModal, setShowSwitchNetworkModal] = useState<boolean>(false)
 
@@ -48,8 +48,8 @@ const WalletInfo: React.FunctionComponent = () => {
     if (account) {
       return
     }
-    setShowConnectModal(true)
-  }, [ account ])
+    activateBrowserWallet()
+  }, [account, activateBrowserWallet])
 
   const disconnect = useCallback(() => {
     if (!account) {
@@ -63,7 +63,6 @@ const WalletInfo: React.FunctionComponent = () => {
   }, [])
 
   const hideModals = useCallback(() => {
-    setShowConnectModal(false)
     setShowDisconnectModal(false)
     setShowSwitchNetworkModal(false)
   }, [])
@@ -75,10 +74,6 @@ const WalletInfo: React.FunctionComponent = () => {
       ) : (
         <GoodChain connect={connect} disconnect={disconnect} account={account} />
       )}
-      <ConnectModal
-        onRequestClose={hideModals}
-        isOpen={showConnectModal}
-      />
       <DisconnectModal
         onRequestClose={hideModals}
         isOpen={showDisconnectModal}
