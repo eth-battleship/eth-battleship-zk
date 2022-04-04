@@ -94,6 +94,9 @@ const createTheme = (): any => ({
       ship: {
         borderColor: darkestGrey,
       },
+      hit: {
+        color: red,
+      }
     },
   },
   ship: {

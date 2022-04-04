@@ -142,7 +142,6 @@ const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
 }
 
 interface PlayerMoveProps {
-  color?: string,
   hit?: boolean,
 }
 
@@ -151,11 +150,11 @@ const PlayerMoveDiv = styled.div`
   height: 100%;
   padding-top: 25%;
   pointer-events: none;
-  background-color: ${(p: any) => p['data-hit'] ? p['data-color'] : 'transparent'};
+  color: ${(p: any) => p['data-hit'] ? p.theme.gameBoard.cell.hit.color : 'inherit'};
 `
 
-const PlayerMove: React.FunctionComponent<PlayerMoveProps> = ({ color, hit }) => {
-  return <PlayerMoveDiv data-hit={hit} data-color={color}>💣</PlayerMoveDiv>
+const PlayerMove: React.FunctionComponent<PlayerMoveProps> = ({ hit }) => {
+  return <PlayerMoveDiv data-hit={hit}>✖</PlayerMoveDiv>
 }
 
 const Page: React.FunctionComponent = () => {
@@ -189,7 +188,7 @@ const Page: React.FunctionComponent = () => {
       || (game?.status === GameState.PLAYER2_TURN && currentUserIsPlayer === 2)
   }, [currentUserIsPlayer, game?.status])
 
-  const buildOnSelectPosHandler = useCallback((boardPlayerNum: number) => (cellPos: Position) => {
+  const onSelectPosHandler = useCallback((cellPos: Position) => {
     playMove(gameId, cellPos)
   }, [gameId, playMove])
 
@@ -208,7 +207,7 @@ const Page: React.FunctionComponent = () => {
         const hit = (opponentPlayerNum === 1 && game?.player1Hits && game?.player1Hits[matchIndex]) 
           || (opponentPlayerNum === 2 && game?.player2Hits && game?.player2Hits[matchIndex]) 
         
-        ret.content = <PlayerMove color={getPlayerColor(opponentPlayerNum)} hit={hit} />
+        ret.content = <PlayerMove hit={hit} />
       }
     }
 
@@ -219,12 +218,13 @@ const Page: React.FunctionComponent = () => {
         // make the cell hittable
         ret.content = <PlayerMove />
         ret.style.cursor = 'pointer'
-        ret.onPress = buildOnSelectPosHandler(playerNum)
+        ret.style.outline = '4px solid black'
+        ret.onPress = onSelectPosHandler
       }
     }
 
     return ret
-  }, [buildOnSelectPosHandler, currentUserIsPlayer, currentUserPlayerTurn, game?.player1Hits, game?.player2Hits, game?.players])
+  }, [onSelectPosHandler, currentUserIsPlayer, currentUserPlayerTurn, game?.updateCount])
 
   const player1BoardCellRenderer = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle) => {
     return playerBoardCellRenderer(1, cellPos, hover, baseStyles)

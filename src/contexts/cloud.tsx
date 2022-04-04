@@ -30,6 +30,7 @@ export interface CloudContextValue {
   connectError: string,
   addNewGame: (id: any, boardLength: number, totalRounds: number, ships: ShipConfig[]) => Promise<void>,
   joinGame: (id: any, ships: ShipConfig[]) => Promise<void>,
+  updateOpponentHits: (id: any, hits: boolean[]) => Promise<void>,
   playMove: (id: any, cellPos: Position) => Promise<void>,
   watchGame: (id: any, callback: OnWatchGameHandler) => CloudWatcher,
   watchPlayerData: (id: any, callback: OnWatchPlayerDataHandler) => CloudWatcher,
@@ -113,6 +114,37 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     ])
   }, [account, authSig, currentChain, db])
 
+  const updateOpponentHits = useCallback(async (id: any, hits: boolean[]) => {
+    const gameRef = doc(db!, 'games', createGameId(currentChain!, id))
+
+    const { updateCount, player1, player2, player1Moves, player2Moves, status }: any = (await getDoc(gameRef)).data()
+
+    const isPlayer1 = (account === player1)
+    const isPlayer2 = (account === player2)
+
+    if (!(isPlayer1 || isPlayer2)) {
+      throw new Error('Must be a player')
+    }
+
+    const existingMoves = isPlayer1 ? player2Moves : player1Moves
+
+    if (hits.length !== existingMoves.length) {
+      throw new Error(`Hits array length mismatch: ${hits.length} != ${existingMoves.length}`)
+    }
+
+    // update
+    await Promise.all([
+      setDoc(gameRef, {
+        updateCount: updateCount + 1,
+        ...(
+          isPlayer1
+            ? { player2Hits: hits }
+            : { player1Hits: hits }
+        ),
+      }, { merge: true }),
+    ])
+  }, [account, currentChain, db])
+
   const playMove = useCallback(async (id: any, pos: Position) => {
     const gameRef = doc(db!, 'games', createGameId(currentChain!, id))
     const playerDataRef = doc(db!, 'playerData', createPlayerDataId(authSig, id))
@@ -132,8 +164,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
 
     // add to moves array
     let { moves, updateCount: pdUpdateCount }: any = (await getDoc(playerDataRef)).data()
-    moves = moves || []
-    moves.push(pos)
+    moves = (moves || []).concat(pos)
 
     // stop when all rounds are done
     let newStatus: GameState
@@ -182,8 +213,9 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       connectError, 
       connected,
       addNewGame,
-      playMove,
       joinGame,
+      updateOpponentHits,
+      playMove,
       watchGame,
       watchPlayerData,
     }}>

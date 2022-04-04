@@ -48,7 +48,7 @@ export interface CloudPlayerData extends PlayerData {
 }
 
 export interface CloudGameData extends BaseGameData {
-  player1Moves?: Position,
+  player1Moves?: Position[],
   player1Hits?: boolean[],
   player2Moves?: Position[],
   player2Hits?: boolean[],

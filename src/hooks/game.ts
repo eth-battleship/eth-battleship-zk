@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
 import { CloudWatcher } from "../contexts"
-import { applyColorsToShips, bytesHexToMoves, bytesHexToShipLengths, bytesHexToShips, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData } from "../lib/game"
+import { applyColorsToShips, bytesHexToMoves, bytesHexToShipLengths, bytesHexToShips, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData, shipsSitOn } from "../lib/game"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useCloud, useGlobal } from "./contexts"
 import { useContract } from "./contract"
@@ -17,7 +17,7 @@ export interface UseGameHook {
  * Asynchronous action progress indicator.
  */
 export const useGame = (gameId?: number): UseGameHook => {
-  const { watchGame, watchPlayerData } = useCloud()
+  const { watchGame, watchPlayerData, updateOpponentHits } = useCloud()
   const { account } = useGlobal()
   const [playerDataWatcher, setPlayerDataWatcher] = useState<CloudWatcher>()
   const [gameWatcher, setGameWatcher] = useState<CloudWatcher>()
@@ -197,14 +197,42 @@ export const useGame = (gameId?: number): UseGameHook => {
         }
       }
 
+      // set moves from public list if not already set
+      if (!game.players[1].moves.length) {
+        game.players[1].moves = cloudGameData?.player1Moves || []
+      }
+      if (!game.players[2].moves.length) {
+        game.players[2].moves = cloudGameData?.player2Moves || []
+      }
+      
       game.player1Hits = game.player1Hits || []
       game.player2Hits = game.player2Hits || []
 
-      return game
+      return { ...game }
     } else {
       return undefined
     }
-  }, [game, currentUserIsPlayer, cloudPlayerData])
+  }, [game, cloudPlayerData, currentUserIsPlayer, cloudGameData?.player1Moves, cloudGameData?.player2Moves])
+
+  useAsyncEffect(async () => {
+    if (!currentUserIsPlayer) {
+      return
+    }
+
+    const playerShips = (currentUserIsPlayer === 1) ? game!.players[1].ships : game!.players[2].ships
+    const opponentMoves = (currentUserIsPlayer === 1) ? game!.player2Moves! : game!.player1Moves!
+    const opponentHits = (currentUserIsPlayer === 1) ? game!.player2Hits! : game!.player1Hits!
+
+    // if there are some hits that need calculating
+    if (opponentMoves.length > opponentHits.length) {
+      for (let i = opponentHits.length; i < opponentMoves.length; i += 1) {
+        opponentHits.push(shipsSitOn(playerShips, opponentMoves[i]))
+      }
+
+      // update cloud db
+      await updateOpponentHits(game!.id, opponentHits)
+    }
+  }, [currentUserIsPlayer, game])
 
   return {
     game: gameWithPlayers,
