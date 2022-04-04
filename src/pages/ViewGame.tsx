@@ -2,9 +2,10 @@ import styled from '@emotion/styled'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAsyncEffect  } from 'use-async-effect'
+import { flex } from 'emotion-styled-utils'
+
 import Button from '../components/Button'
 import ErrorBox from '../components/ErrorBox'
-
 import GameBoard from '../components/GameBoard'
 import Layout from '../components/Layout'
 import ProgressBox from '../components/ProgressBox'
@@ -54,26 +55,38 @@ const Player2 = styled(Player)`
 `
 
 const GameBoardDiv = styled.div`
-  margin: 1.5rem 0;
+  margin-top: 1rem;
 `
 
 const JoinButton = styled(Button)`
   margin-bottom: 0.5rem;
 `
 
+const PlayerGameBoardsDiv = styled.div`
+  ${flex({ direction: 'row', justify: 'flex-start', align: 'flex-start' })};
+`
+
+const PlayerGameBoardDiv = styled.div``
+
+const BoardTitle = styled.p`
+  color: ${(p: any) => getPlayerColor(p['data-player'])};
+  font-size: 0.8rem;
+`
+
+const PlayerGameBoard = styled(GameBoard)`
+  margin-right: 2rem;
+`
+
 interface JoinProps {
   game: CloudGameData,
-
 }
+
 const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
   const { joinGame } = useCloud()
 
-  const [ships, setShips] = useState<ShipConfig[]>([
-  ])
+  const [ships, setShips] = useState<ShipConfig[]>([])
 
-  console.log(game)
-
-  const shipLengths = useMemo(() => game.players[0].ships.map(({ length }) => length), [game.players])
+  const shipLengths = useMemo(() => game.shipLengths, [game.shipLengths])
 
   const contract = useContract()
   const contractCall = useContractFunctionV2({ contract, functionName: 'join' })
@@ -166,16 +179,27 @@ const Page: React.FunctionComponent = () => {
           </Players>
           <Status>Status:<strong>{statusText}</strong></Status>
           <GameBoardDiv>
-
+            {currentUserCanJoinAsOpponent ? (
+              <JoinPlayerBoard game={game} />
+            ) : (
+              <PlayerGameBoardsDiv>
+                <PlayerGameBoardDiv>
+                  <BoardTitle data-player={1}>Player 1</BoardTitle>
+                  <PlayerGameBoard
+                    boardLength={game.boardLength}
+                    ships={game.players[1].ships}
+                  />
+                </PlayerGameBoardDiv>
+                <PlayerGameBoardDiv>
+                  <BoardTitle data-player={2}>Player 2</BoardTitle>
+                  <PlayerGameBoard
+                    boardLength={game.boardLength}
+                    ships={game.players[2] ? game.players[2].ships : []}
+                  />
+                </PlayerGameBoardDiv>
+              </PlayerGameBoardsDiv>
+            )}
           </GameBoardDiv>
-          {currentUserCanJoinAsOpponent ? (
-            <JoinPlayerBoard game={game} />
-          ) : (
-            <GameBoard
-              boardLength={game.boardLength}
-              ships={game.players.length ? game.players[0].ships : []}
-            />
-          )}
         </GameDiv>
       ) : (
         <ProgressBox>Loading game data...</ProgressBox>

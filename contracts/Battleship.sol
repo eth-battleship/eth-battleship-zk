@@ -58,7 +58,7 @@ contract Battleship {
   // all games 
   uint public totalGames;
   mapping(uint => Game) public games;
-  mapping(uint => mapping(address => Player)) players;
+  mapping(uint => mapping(address => Player)) public players;
 
 
   // events

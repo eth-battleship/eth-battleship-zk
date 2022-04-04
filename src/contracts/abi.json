@@ -192,6 +192,50 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "players",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "shipsHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "moves",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "ships",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint256",
+        "name": "hits",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum Battleship.PlayerState",
+        "name": "state",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "gameId_",
         "type": "uint256"
       },

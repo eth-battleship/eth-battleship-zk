@@ -51,7 +51,9 @@ export const Ship: React.FunctionComponent<Props> = ({ ship, onPress, blockSize,
 
   return (
     <Table className={className}>
-      {rows}
+      <tbody>
+        {rows}
+      </tbody>
     </Table>
   )
 }

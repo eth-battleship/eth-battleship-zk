@@ -1,9 +1,9 @@
 import styled from '@emotion/styled'
 import React, { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import Button from '../components/Button'
 import ErrorBox from '../components/ErrorBox'
-
 import Layout from '../components/Layout'
 import ProgressBox from '../components/ProgressBox'
 import SetupGameBoard from '../components/SetupGameBoard'

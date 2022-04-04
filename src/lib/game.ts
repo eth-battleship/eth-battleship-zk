@@ -8,8 +8,9 @@ export enum GameState {
   NEED_OPPONENT = 0,
   PLAYER1_TURN = 1,
   PLAYER2_TURN = 2,
-  REVEAL_BOARD = 3,
-  ENDED = 4,
+  REVEAL_MOVES = 3,
+  REVEAL_BOARD = 4,
+  ENDED = 5,
 }
 
 export interface Position {
@@ -37,7 +38,7 @@ export interface BaseGameData {
   boardLength: number,
   player1: string,
   player2?: string,
-  players: PlayerData[]
+  players: Record<number, PlayerData>,
   status: GameState,
 }
 
@@ -163,6 +164,51 @@ export const shipsToBytesHex = (ships: ShipConfig[]): string => {
   })
 
   return hexlify(bytes)
+}
+
+export const bytesHexToShips = (shipsBytesHex: string, shipLengths: number[]): ShipConfig[] => {
+  const bytes: number[] = Array.from(arrayify(shipsBytesHex))
+  const ships: ShipConfig[] = []
+
+  for(let i = 0; i<bytes.length; i += 3) {
+    const id = i / 3
+
+    ships.push({
+      id,
+      length: shipLengths[id],
+      position: {
+        x: bytes[i],
+        y: bytes[i + 1],
+      },
+      isVertical: bytes[i + 2] === 1,
+    })
+  }
+
+  return ships
+}
+
+export const movesToBytesHex = (moves: Position[]): string => {
+  const bytes: number[] = []
+
+  moves.forEach(({ x, y }) => {
+    bytes.push(x, y)
+  })
+
+  return hexlify(bytes)
+}
+
+export const bytesHexToMoves = (movesHex: string): Position[] => {
+  const bytes: number[] = Array.from(arrayify(movesHex))
+  const moves: Position[] = []
+
+  for (let i = 0; i < bytes.length; i += 2) {
+    moves.push({
+      x: bytes[i],
+      y: bytes[i + 1],
+    })
+  }
+
+  return moves
 }
 
 export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)
