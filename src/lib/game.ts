@@ -1,5 +1,5 @@
 import { SHA3 } from 'sha3'
-import { hexlify } from '@ethersproject/bytes'
+import { arrayify, hexlify } from '@ethersproject/bytes'
 import { ChainInfo } from './chain'
 
 
@@ -32,17 +32,28 @@ export interface PlayerData {
   moves: Position[],
 }
 
-export interface GameData {
+export interface BaseGameData {
   id: number,
   boardLength: number,
   player1: string,
   player2?: string,
   players: PlayerData[]
-  winner?: string,
-  totalRounds?: number,
-  created?: number,
   status: GameState,
 }
+
+export interface CloudGameData extends BaseGameData {
+  created: number,
+  updateCount: number,
+}
+
+export interface ContractGameData extends BaseGameData {
+  shipLengths: number[],
+  totalRounds: number,
+  winner?: string,
+}
+
+export interface GameData extends CloudGameData, ContractGameData {}
+
 
 export const getShipColor = (length: number): string => {
   switch (length) {
@@ -155,6 +166,8 @@ export const shipsToBytesHex = (ships: ShipConfig[]): string => {
 }
 
 export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)
+
+export const bytesHexToShipLengths = (shipLengthsHex: string): number[] => Array.from(arrayify(shipLengthsHex))
 
 export const createPlayerDataId = (authSig: string, id: any): string => {
   return new SHA3(512).update(authSig).update(id.toString()).digest('hex')

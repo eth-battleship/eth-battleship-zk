@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
 import { CloudGameData, CloudGameWatcher } from "../contexts"
-import { applyColorsToShips, GameData, GameState, PlayerData } from "../lib/game"
+import { applyColorsToShips, bytesHexToShipLengths, ContractGameData, GameData, GameState, PlayerData } from "../lib/game"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useCloud, useGlobal } from "./contexts"
 import { useContract } from "./contract"
@@ -22,7 +22,7 @@ export const useGame = (gameId?: number): UseGameHook => {
   const [watcher, setWatcher] = useState<CloudGameWatcher>()
   const [cloudGameData, setCloudGameData] = useState<CloudGameData>()
   const [cloudPlayerData, setCloudPlayerData] = useState<PlayerData>()
-  const [contractGameData, setContractGameData] = useState<GameData>()
+  const [contractGameData, setContractGameData] = useState<ContractGameData>()
   const [error, setError] = useState<string>()
 
   // when cloud game data gets updated
@@ -78,12 +78,13 @@ export const useGame = (gameId?: number): UseGameHook => {
 
       const d = await contract.games(gameId)
 
-      const obj: GameData = {
+      const obj: ContractGameData = {
         id: gameId,
+        boardLength: d.boardSize.toNumber(),
         totalRounds: d.numRounds.toNumber(),
+        shipLengths: bytesHexToShipLengths(d.shipLengths),
         player1: d.player1,
         player2: d.player2 !== ADDRESS_ZERO ? d.player2 : undefined,
-        boardLength: d.boardSize.toNumber(),
         status: GameState.UNKNOWN,
         players: [],
       }
@@ -140,13 +141,15 @@ export const useGame = (gameId?: number): UseGameHook => {
   }, [account, game?.player1, game?.player2])
 
   const gameWithPlayers = useMemo(() => {
-    if (game && cloudPlayerData) {
-      if (currentUserIsPlayer === 1) {
-        const pd = {
-          ...cloudPlayerData,
-          ships: applyColorsToShips(cloudPlayerData.ships, 1),
+    if (game) {
+      if (cloudPlayerData) {
+        if (currentUserIsPlayer === 1) {
+          const pd = {
+            ...cloudPlayerData,
+            ships: applyColorsToShips(cloudPlayerData.ships, 1),
+          }
+          game.players.push(pd)
         }
-        game.players.push(pd)
       }
       return game
     } else {

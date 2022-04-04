@@ -38,6 +38,7 @@ export interface CloudContextValue {
   connected: boolean,
   connectError: string,
   addNewGame: (id: any, boardLength: number, ships: ShipConfig[]) => Promise<void>,
+  joinGame: (id: any, ships: ShipConfig[]) => Promise<void>,
   loadPlayerData: (id: any) => Promise<PlayerData | undefined>
   watchGame: (id: any, callback: OnWatchGameHandler) => CloudGameWatcher
 }
@@ -56,7 +57,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
 
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          console.log('Firebase user signed-in', user)
+          // console.log('Firebase user signed-in')
           setDb(getFirestore(app))
           setConnected(true)
         } else {
@@ -94,6 +95,29 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     ])
   }, [account, authSig, currentChain, db])
 
+  const joinGame = useCallback(async (id: any, ships: ShipConfig[]) => {
+    const gameId = createGameId(currentChain!, id)
+
+    const ref = doc(db!, 'games', gameId)
+
+    const { updateCount }: any = (await getDoc(ref)).data()
+
+    await Promise.all([
+      setDoc(ref, {
+        id,
+        player2: account,
+        status: GameState.PLAYER1_TURN,
+        updateCount: updateCount + 1,
+      }),
+      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), {
+        gameId,
+        player: account,
+        ships,
+        moves: [],
+      })
+    ])
+  }, [account, authSig, currentChain, db])
+
   const loadPlayerData = useCallback(async (id: any) => {
     const docSnap = await getDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)))
     if (docSnap.exists()) {
@@ -118,6 +142,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       connectError, 
       connected,
       addNewGame,
+      joinGame,
       watchGame,
       loadPlayerData,
     }}>

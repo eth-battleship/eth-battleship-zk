@@ -50,7 +50,7 @@ const Page: React.FunctionComponent = () => {
     const shipLengthsHex = shipLengthsToBytesHex(SHIP_LENGTHS)
     const shipsHex = shipsToBytesHex(ships)
 
-    flow.add('Calculate ship hash', async () => {
+    flow.add('Calculate ships hash', async () => {
       shipsHash = await contract.calculateShipsHash( shipLengthsHex, BOARD_LENGTH, shipsHex)
     })
 
