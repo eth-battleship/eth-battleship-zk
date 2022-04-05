@@ -83,7 +83,7 @@ async function main() {
 
         await Promise.all([
           {
-            contract: 'contracts/Game.sol:Game',
+            contract: 'contracts/Battleship.sol:Battleship',
             address: battleship.address,
             constructorArgs: [],
           },

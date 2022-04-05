@@ -46,6 +46,7 @@
     "contracts:clean": "rm -rf ./cache && rm -rf ./artifacts",
     "contracts:compile": "yarn contracts:clean && yarn hardhat compile",
     "contracts:deploy:local": "yarn hardhat run --network localhost ./deploy",
+    "contracts:deploy:rinkeby": "yarn hardhat run --network rinkeby ./deploy",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
