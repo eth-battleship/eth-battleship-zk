@@ -119,18 +119,23 @@ export const calculateShipEndPoint = (ship: ShipConfig): Position => {
   return { x, y }
 }
 
-export const shipSitsOn = (shipPos: ShipConfig, pos: Position) => {
+export const shipSitsOn = (ship: ShipConfig, pos: Position) => {
   const { x, y } = pos
-  const { x: endX, y: endY } = calculateShipEndPoint(shipPos)
-  return (shipPos.position.x <= x && shipPos.position.y <= y && endX >= x && endY >= y)
+  const { x: endX, y: endY } = calculateShipEndPoint(ship)
+  return (ship.position.x <= x && ship.position.y <= y && endX >= x && endY >= y)
 }
 
 
-export const shipsSitOn = (shipPosArray: ShipConfig[], pos: Position) => (
-  Object.values(shipPosArray).reduce((m, shipPos) => (
-    m || shipSitsOn(shipPos, pos)
+export const shipsSitOn = (ships: ShipConfig[], pos: Position) => (
+  Object.values(ships).reduce((m, ship) => (
+    m || shipSitsOn(ship, pos)
   ), false)
 )
+
+
+export const calculateHits = (ships: ShipConfig[], moves: Position[]): boolean[] => {
+  return moves.map(move => shipsSitOn(ships, move))
+}
 
 
 

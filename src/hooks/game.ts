@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
 import { CloudWatcher } from "../contexts"
-import { applyColorsToShips, bigNumToMoves, bytesHexToShipLengths, bytesHexToShips, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData, shipsSitOn } from "../lib/game"
+import { applyColorsToShips, bigNumToMoves, bytesHexToShipLengths, bytesHexToShips, calculateHits, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData, shipsSitOn } from "../lib/game"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useCloud, useGlobal } from "./contexts"
 import { useContract } from "./contract"
@@ -156,6 +156,7 @@ export const useGame = (gameId?: number): UseGameHook => {
           ships: bytesHexToShips(pd2.ships, obj.shipLengths),
         }
       }
+      // set flags
       for (let i = 1; i <= 2; i += 1) {
         if (obj.players[i].moves.length) {
           obj.players[i].revealedMoves = true
@@ -165,6 +166,13 @@ export const useGame = (gameId?: number): UseGameHook => {
           obj.players[i].ships = applyColorsToShips(obj.players[i].ships, i)
           obj.players[i].revealedBoard = true
         }
+      }
+      // calculate hits if possible
+      if (obj.players[1].moves.length && obj.players[2].ships.length) {
+        obj.players[1].hits = calculateHits(obj.players[2].ships, obj.players[1].moves)
+      }
+      if (obj.players[2].moves.length && obj.players[1].ships.length) {
+        obj.players[2].hits = calculateHits(obj.players[1].ships, obj.players[2].moves)
       }
 
       setContractGameData(obj)
