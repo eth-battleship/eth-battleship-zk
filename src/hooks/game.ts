@@ -1,3 +1,4 @@
+import structuredClone from "@ungap/structured-clone"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
@@ -142,14 +143,14 @@ export const useGame = (gameId?: number): UseGameHook => {
     } catch (err: any) {
       setError(`Error loading game info from contract: ${err.toString()}`)
     }
-  }, [contract, gameId])
+  }, [contract, gameId, cloudGameData?.updateCount])
 
   // combine both sets of data
-  const game = useMemo(() => {
+  const gameWithoutPlayers = useMemo(() => {
     if (cloudGameData && contractGameData) {
       const obj = {
-        ...cloudGameData,
-        ...contractGameData, // overwrite cloud data with contract data
+        ...structuredClone(cloudGameData),
+        ...structuredClone(contractGameData), // overwrite cloud data with contract data
       }
 
       if (contractGameData.status === GameState.UNKNOWN) {
@@ -163,68 +164,70 @@ export const useGame = (gameId?: number): UseGameHook => {
   }, [cloudGameData, contractGameData])
 
   const currentUserIsPlayer = useMemo(() => {
-    if (account === game?.player1) {
+    if (account === gameWithoutPlayers?.player1) {
       return 1
-    } else if (account === game?.player2) {
+    } else if (account === gameWithoutPlayers?.player2) {
       return 2
     } else {
       return 0
     }
-  }, [account, game?.player1, game?.player2])
+  }, [account, gameWithoutPlayers?.player1, gameWithoutPlayers?.player2])
 
-  const gameWithPlayers = useMemo(() => {
-    if (game) {
+  const game = useMemo(() => {
+    if (gameWithoutPlayers) {
+      const ret = structuredClone(gameWithoutPlayers)
+
       // augment player data with cloud data where necessary and possible
       if (cloudPlayerData) {
         if (currentUserIsPlayer === 1) {
-          if (game.players[1]) {
-            if (!game.players[1].ships.length) {
-              game.players[1].ships = applyColorsToShips(cloudPlayerData.ships, 1)
+          if (gameWithoutPlayers.players[1]) {
+            if (!gameWithoutPlayers.players[1].ships.length) {
+              ret.players[1].ships = applyColorsToShips(cloudPlayerData.ships, 1)
             }
-            if (!game.players[1].moves.length) {
-              game.players[1].moves = cloudPlayerData.moves
+            if (!gameWithoutPlayers.players[1].moves.length) {
+              ret.players[1].moves = structuredClone(cloudPlayerData.moves)
             }
           }
         } else if (currentUserIsPlayer === 2) {
-          if (game.players[2]) {
-            if (!game.players[2].ships.length) {
-              game.players[2].ships = applyColorsToShips(cloudPlayerData.ships, 2)
+          if (gameWithoutPlayers.players[2]) {
+            if (!gameWithoutPlayers.players[2].ships.length) {
+              ret.players[2].ships = applyColorsToShips(cloudPlayerData.ships, 2)
             }
-            if (!game.players[2].moves.length) {
-              game.players[2].moves = cloudPlayerData.moves
+            if (!gameWithoutPlayers.players[2].moves.length) {
+              ret.players[2].moves = structuredClone(cloudPlayerData.moves)
             }
           }
         }
       }
 
       // set moves from public list if not already set
-      if (!game.players[1].moves.length) {
-        game.players[1].moves = cloudGameData?.player1Moves || []
+      if (!gameWithoutPlayers.players[1].moves.length) {
+        ret.players[1].moves = structuredClone(cloudGameData?.player1Moves || [])
+        ret.players[1].hits = ret.player1Hits || []
       }
-      if (!game.players[2].moves.length) {
-        game.players[2].moves = cloudGameData?.player2Moves || []
+      if (gameWithoutPlayers.players[2] && !gameWithoutPlayers.players[2].moves.length) {
+        ret.players[2].moves = structuredClone(cloudGameData?.player2Moves || [])
+        ret.players[2].hits = ret.player2Hits || []
       }
-      
-      game.player1Hits = game.player1Hits || []
-      game.player2Hits = game.player2Hits || []
 
-      return { ...game }
+      return ret
     } else {
       return undefined
     }
-  }, [game, cloudPlayerData, currentUserIsPlayer, cloudGameData?.player1Moves, cloudGameData?.player2Moves])
+  }, [gameWithoutPlayers, cloudPlayerData, currentUserIsPlayer, cloudGameData?.player1Moves, cloudGameData?.player2Moves])
 
+  // update opponent hits
   useAsyncEffect(async () => {
-    if (!currentUserIsPlayer) {
+    if (!currentUserIsPlayer || game?.status === GameState.NEED_OPPONENT) {
       return
     }
 
     const playerShips = (currentUserIsPlayer === 1) ? game!.players[1].ships : game!.players[2].ships
-    const opponentMoves = (currentUserIsPlayer === 1) ? game!.player2Moves! : game!.player1Moves!
-    const opponentHits = (currentUserIsPlayer === 1) ? game!.player2Hits! : game!.player1Hits!
+    const opponentMoves = (currentUserIsPlayer === 1) ? game!.players[2].moves! : game!.players[1].moves!
+    const opponentHits = (currentUserIsPlayer === 1) ? game!.players[2].hits! : game!.players[1].hits!
 
     // if there are some hits that need calculating
-    if (opponentMoves.length > opponentHits.length) {
+    if (opponentMoves && opponentHits && opponentMoves.length > opponentHits.length) {
       for (let i = opponentHits.length; i < opponentMoves.length; i += 1) {
         opponentHits.push(shipsSitOn(playerShips, opponentMoves[i]))
       }
@@ -232,10 +235,10 @@ export const useGame = (gameId?: number): UseGameHook => {
       // update cloud db
       await updateOpponentHits(game!.id, opponentHits)
     }
-  }, [currentUserIsPlayer, game])
+  }, [currentUserIsPlayer, game?.updateCount])
 
   return {
-    game: gameWithPlayers,
+    game,
     currentUserIsPlayer,
     error,
   }

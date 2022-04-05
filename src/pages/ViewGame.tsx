@@ -65,15 +65,27 @@ const PlayerGameBoardsDiv = styled.div`
   ${flex({ direction: 'row', justify: 'flex-start', align: 'flex-start' })};
 `
 
-const PlayerGameBoardDiv = styled.div``
-
-const BoardTitle = styled.p`
-  color: ${(p: any) => getPlayerColor(p['data-player'])};
-  font-size: 0.8rem;
+const PlayerGameBoardDiv = styled.div`
+  margin-right: 2rem;
 `
 
+const BoardTitle = styled.div`
+  ${flex({ direction: 'row', justify: 'space-between', align: 'center' })};
+  font-size: 0.8rem;
+
+  & > span {
+    display: block;
+    color: ${(p: any) => getPlayerColor(p['data-player'])};
+  }
+
+  & > div {
+    ${(p: any) => p.theme.font('body', 'normal', 'italic')}
+    color: ${(p: any) => getPlayerColor(p['data-player'] === 1 ? 2 : 1)};
+  }
+`
+
+
 const PlayerGameBoard = styled(GameBoard)`
-  margin-right: 2rem;
 `
 
 interface JoinProps {
@@ -203,10 +215,9 @@ const Page: React.FunctionComponent = () => {
     const moves = game?.players[opponentPlayerNum]?.moves || []
     if (moves.length) {
       const matchIndex = moves.findIndex((pos: Position) => positionsMatch(pos, cellPos))
+
       if (0 <= matchIndex) {
-        const hit = (opponentPlayerNum === 1 && game?.player1Hits && game?.player1Hits[matchIndex]) 
-          || (opponentPlayerNum === 2 && game?.player2Hits && game?.player2Hits[matchIndex]) 
-        
+        const hit = (game?.players[opponentPlayerNum]?.hits || [])[matchIndex]
         ret.content = <PlayerMove hit={hit} />
       }
     }
@@ -234,6 +245,9 @@ const Page: React.FunctionComponent = () => {
     return playerBoardCellRenderer(2, cellPos, hover, baseStyles)
   }, [playerBoardCellRenderer])
 
+  const player1Hits = useMemo(() => game?.players[1].hits?.reduce((m, v) => m + (v ? 1 : 0), 0), [game?.players])
+  const player2Hits = useMemo(() => game?.players[2] ? game?.players[2].hits?.reduce((m, v) => m + (v ? 1 : 0), 0) : 0, [game?.players])
+
   return (
     <Container>
       <h1>Game #{gameId}</h1>
@@ -250,7 +264,10 @@ const Page: React.FunctionComponent = () => {
             ) : (
               <PlayerGameBoardsDiv>
                 <PlayerGameBoardDiv>
-                  <BoardTitle data-player={1}>Player 1</BoardTitle>
+                  <BoardTitle data-player={1}>
+                    <span>Player 1</span>
+                    <div>P2 hits: {player2Hits}</div>
+                  </BoardTitle>
                   <PlayerGameBoard
                     boardLength={game.boardLength}
                     ships={game.players[1].ships}
@@ -258,7 +275,10 @@ const Page: React.FunctionComponent = () => {
                   />
                 </PlayerGameBoardDiv>
                 <PlayerGameBoardDiv>
-                  <BoardTitle data-player={2}>Player 2</BoardTitle>
+                  <BoardTitle data-player={2}>
+                    <span>Player 2</span>
+                    <div>P1 hits: {player1Hits}</div>
+                  </BoardTitle>
                   <PlayerGameBoard
                     boardLength={game.boardLength}
                     ships={game.players[2] ? game.players[2].ships : []}

@@ -1,3 +1,4 @@
+import structuredClone from '@ungap/structured-clone'
 import { SHA3 } from 'sha3'
 import { arrayify, hexlify } from '@ethersproject/bytes'
 import { ChainInfo } from './chain'
@@ -31,6 +32,7 @@ export interface PlayerData {
   player: string,
   ships: ShipConfig[],
   moves: Position[],
+  hits?: boolean[],
 }
 
 export interface BaseGameData {
@@ -94,7 +96,7 @@ export const getOpponentNum = (playerNum: number) => (1 === playerNum) ? 2 : 1
 export const applyColorsToShips = (ships: ShipConfig[], playerNumber?: number): ShipConfig[] => {
   return ships.map(ship => {
     return {
-      ...ship,
+      ...structuredClone(ship),
       color: playerNumber ? getPlayerColor(playerNumber) : getShipColor(ship.length)
     }
   })

@@ -20,6 +20,7 @@
     "@types/node": "^16.11.26",
     "@types/react": "^17.0.43",
     "@types/react-dom": "^17.0.14",
+    "@ungap/structured-clone": "^0.3.4",
     "@usedapp/core": "^0.12.1",
     "chalk": "^4.1.2",
     "delay": "^5.0.0",
@@ -72,6 +73,7 @@
   },
   "devDependencies": {
     "@types/got": "^9.6.12",
-    "@types/react-modal": "^3.13.1"
+    "@types/react-modal": "^3.13.1",
+    "@types/ungap__structured-clone": "^0.3.0"
   }
 }
