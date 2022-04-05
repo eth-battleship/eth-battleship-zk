@@ -197,7 +197,12 @@ contract Battleship {
     // if opponent has also already revealed board then update game state
     if (pOpp.state == PlayerState.RevealedBoard) {
       g.state = GameState.Over;
-      g.winner = p.hits > pOpp.hits ? msg.sender : opponent;
+
+      if (p.hits > pOpp.hits) {
+        g.winner = msg.sender;
+      } else if (pOpp.hits > p.hits) {
+        g.winner = opponent;
+      }
 
       emit GameOver(gameId_);
     }

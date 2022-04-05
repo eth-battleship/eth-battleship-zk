@@ -61,10 +61,6 @@ const JoinButton = styled(Button)`
   margin-bottom: 0.5rem;
 `
 
-const RevealButton = styled(Button)`
-  padding: 0.3em 0.5em;
-`
-
 const PlayerGameBoardsDiv = styled.div`
   ${flex({ direction: 'row', justify: 'flex-start', align: 'flex-start' })};
 `
@@ -196,7 +192,6 @@ const Reveal: React.FunctionComponent<RevealProps> = ({ game, currentUserIsPlaye
     <React.Fragment>
       <Button onClick={submit}>Reveal {revealMoves ? 'moves' : 'board'}</Button>
       {progress.activeStep ? <ProgressBox>{(progress.activeStep as string)}</ProgressBox> : null}
-      {progress.completed ? <SuccessBox>Revealed ✅</SuccessBox> : null}
       {progress.error ? <ErrorBox>{progress.error}</ErrorBox> : null}
     </React.Fragment>
   )
@@ -311,7 +306,13 @@ const Page: React.FunctionComponent = () => {
           return 'Reveal board'
         }
       case GameState.ENDED:
-        return `${game.winner === game.player1 ? 'Player 1' : 'Player 2'} wins`
+        if (game.winner === game.player1) {
+          return 'Player 1 wins'
+        } else if (game.winner === game.player2) {
+          return 'Player 2 wins'
+        } else {
+          return 'Draw'
+        }
     }
   }, [currentUserIsPlayer, game])
 

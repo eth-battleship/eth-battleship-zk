@@ -20,10 +20,7 @@ export const useContract = (): UseContractHook => {
     }
     return ADDRESSES[currentChain.chainId].Battleship
   }, [currentChain])
-  const contract = useMemo(() => {
-    return new Contract(address, ABI, library)
-  }, [address, library])
-  return contract
+  return new Contract(address, ABI, library)
 }
 
 interface UseContractFunctionV2Hook {
