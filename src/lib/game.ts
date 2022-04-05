@@ -1,4 +1,5 @@
 import structuredClone from '@ungap/structured-clone'
+import { BigNumber } from '@ethersproject/bignumber'
 import { SHA3 } from 'sha3'
 import { arrayify, hexlify } from '@ethersproject/bytes'
 import { ChainInfo } from './chain'
@@ -7,11 +8,10 @@ import { ChainInfo } from './chain'
 export enum GameState {
   UNKNOWN = -1,
   NEED_OPPONENT = 0,
-  PLAYER1_TURN = 1,
-  PLAYER2_TURN = 2,
-  REVEAL_MOVES = 3,
-  REVEAL_BOARD = 4,
-  ENDED = 5,
+  PLAYING = 1,
+  REVEAL_MOVES = 2,
+  REVEAL_BOARD = 3,
+  ENDED = 4,
 }
 
 export interface Position {
@@ -33,6 +33,8 @@ export interface PlayerData {
   ships: ShipConfig[],
   moves: Position[],
   hits?: boolean[],
+  revealedMoves?: boolean,
+  revealedBoard?: boolean,
 }
 
 export interface BaseGameData {
@@ -54,6 +56,10 @@ export interface CloudGameData extends BaseGameData {
   player1Hits?: boolean[],
   player2Moves?: Position[],
   player2Hits?: boolean[],
+  player1RevealedMoves?: boolean,
+  player2RevealedMoves?: boolean,
+  player1RevealedBoard?: boolean,
+  player2RevealedBoard?: boolean,
   created: number,
   updateCount: number,
 }
@@ -63,7 +69,8 @@ export interface ContractGameData extends BaseGameData {
   winner?: string,
 }
 
-export interface GameData extends CloudGameData, ContractGameData {}
+export interface GameData extends CloudGameData, ContractGameData {
+}
 
 
 export const getShipColor = (length: number): string => {
@@ -207,32 +214,31 @@ export const bytesHexToShips = (shipsBytesHex: string, shipLengths: number[]): S
   return ships
 }
 
-export const movesToBytesHex = (moves: Position[]): string => {
-  const bytes: number[] = []
+export const movesToBigNum = (boardLength: number, moves: Position[]): any => {
+  let bn = BigNumber.from(0)
 
   moves.forEach(({ x, y }) => {
-    bytes.push(x, y)
+    const bit = BigNumber.from(1).shl(x * boardLength + y)
+    bn = bn.or(bit)
   })
 
-  return hexlify(bytes)
+  return bn  
 }
 
-export const bytesHexToMoves = (movesHex: string): Position[] => {
-  const bytes: number[] = Array.from(arrayify(movesHex))
-  const moves: Position[] = []
+export const bigNumToMoves = (boardLength: number, moves: any): Position[] => {
+  let bn = BigNumber.from(moves)
+  const arr: Position[] = []
 
-  if (bytes.length < 2) {
-    return moves
-  }
-
-  for (let i = 0; i < bytes.length; i += 2) {
-    moves.push({
-      x: bytes[i],
-      y: bytes[i + 1],
-    })
-  }
-
-  return moves
+  for (let x = 0; boardLength > x; x += 1) {
+    for (let y = 0; boardLength > y; y += 1) {
+      if (bn.and(1).eq(1)) {
+        arr.push({ x,y  })
+      }
+      bn = bn.shr(1)
+    }
+  }  
+  
+  return arr
 }
 
 export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)

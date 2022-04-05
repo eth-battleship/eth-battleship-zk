@@ -15,7 +15,7 @@ import { ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
 
 const SHIP_LENGTHS = [5, 4, 3, 3, 2]
 const BOARD_LENGTH = 10
-const NUM_ROUNDS = 20
+const NUM_ROUNDS = 2
 
 const H1 = styled.h1`
   margin-bottom: 2rem;

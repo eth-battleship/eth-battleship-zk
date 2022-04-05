@@ -95,3 +95,4 @@ export const useContractFunctionV2 = (opts: UseContractFunctionV2Input): UseCont
     progress,
   }
 }
+

@@ -12,7 +12,7 @@ import SetupGameBoard from '../components/SetupGameBoard'
 import SuccessBox from '../components/SuccessBox'
 import { useCloud, useContract, useContractFunctionV2, useGame, useProgress } from '../hooks'
 import { Flow } from '../lib/flow'
-import { CloudGameData, GameData, GameState, getOpponentNum, getPlayerColor, Position, positionsMatch, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
+import { CloudGameData, GameData, GameState, getOpponentNum, getPlayerColor, movesToBigNum, Position, positionsMatch, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
 import { CssStyle } from '../components/interfaces'
 
 const Container = styled.div`
@@ -54,11 +54,15 @@ const Player2 = styled(Player)`
 `
 
 const GameBoardDiv = styled.div`
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 `
 
 const JoinButton = styled(Button)`
   margin-bottom: 0.5rem;
+`
+
+const RevealButton = styled(Button)`
+  padding: 0.3em 0.5em;
 `
 
 const PlayerGameBoardsDiv = styled.div`
@@ -95,7 +99,9 @@ interface JoinProps {
 const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
   const { joinGame } = useCloud()
 
-  const [ships, setShips] = useState<ShipConfig[]>([])
+  const [ships, setShips] = useState<ShipConfig[]>([
+    { "id": 0, "position": { "x": 0, "y": 2 }, "length": 5, "isVertical": false }, { "id": 1, "position": { "x": 3, "y": 7 }, "length": 4, "isVertical": true }, { "id": 2, "position": { "x": 3, "y": 1 }, "length": 3, "isVertical": false }, { "id": 3, "position": { "x": 7, "y": 6 }, "length": 3, "isVertical": true }, { "id": 4, "position": { "x": 7, "y": 3 }, "length": 2, "isVertical": false }
+  ])
 
   const shipLengths = useMemo(() => game.shipLengths, [game.shipLengths])
 
@@ -145,10 +151,53 @@ const JoinPlayerBoard: React.FunctionComponent<JoinProps> = ({ game }) => {
       <div>
         {progress.activeStep ? <ProgressBox>{(progress.activeStep as string)}</ProgressBox> : null}
         {progress.completed ? <SuccessBox>Game joined ✅</SuccessBox> : null}
-        {progress.error ? (
-          <ErrorBox>{progress.error}</ErrorBox>
-        ) : null}
+        {progress.error ? <ErrorBox>{progress.error}</ErrorBox> : null}
       </div>
+    </React.Fragment>
+  )
+}
+
+interface RevealProps {
+  game: GameData,
+  currentUserIsPlayer: number,
+}
+
+const Reveal: React.FunctionComponent<RevealProps> = ({ game, currentUserIsPlayer }) => {
+  const { reveal } = useCloud()
+
+  const revealMoves = useMemo(() => game!.status === GameState.REVEAL_MOVES, [game])
+
+  const contract = useContract()
+  const contractCall = useContractFunctionV2({ 
+    contract, 
+    functionName: revealMoves ? 'revealMoves' : 'revealBoard'
+  })
+  const progress = useProgress()
+
+  const submit = useCallback(async () => {
+    const flow = new Flow(progress)
+
+    flow.add('Reveal to contract', async () => {
+      const data= revealMoves 
+        ? movesToBigNum(game!.boardLength, game!.players[currentUserIsPlayer].moves)
+        : shipsToBytesHex(game!.players[currentUserIsPlayer].ships)
+
+      await contractCall.exec(game!.id, data)
+    })
+
+    flow.add('Updating cloud', async () => {
+      await reveal(game!.id)
+    })
+
+    await flow.run()
+  }, [contractCall, currentUserIsPlayer, game, progress, reveal, revealMoves])
+
+  return (
+    <React.Fragment>
+      <Button onClick={submit}>Reveal {revealMoves ? 'moves' : 'board'}</Button>
+      {progress.activeStep ? <ProgressBox>{(progress.activeStep as string)}</ProgressBox> : null}
+      {progress.completed ? <SuccessBox>Revealed ✅</SuccessBox> : null}
+      {progress.error ? <ErrorBox>{progress.error}</ErrorBox> : null}
     </React.Fragment>
   )
 }
@@ -174,32 +223,12 @@ const Page: React.FunctionComponent = () => {
   const { playMove } = useCloud()
   const { game, error, currentUserIsPlayer } = useGame(gameId ? parseInt(gameId) : undefined)
 
-  // rendering stuff....
-
-  const statusText = useMemo(() => {
-    switch (game?.status) {
-      case GameState.NEED_OPPONENT:
-        return 'Awaiting opponent'
-      case GameState.PLAYER1_TURN:
-        return currentUserIsPlayer === 1 ? 'Your turn' : 'Player 1\'s turn'
-      case GameState.PLAYER2_TURN:
-        return currentUserIsPlayer === 2 ? 'Your turn' : 'Player 2\'s turn'
-      case GameState.REVEAL_BOARD:
-        return 'Calculating winner'
-      case GameState.ENDED:
-        return 'Ended'
-    }
-  }, [currentUserIsPlayer, game?.status])
-
   const currentUserCanJoinAsOpponent = useMemo(() => {
     return game?.status === GameState.NEED_OPPONENT && !currentUserIsPlayer
   }, [currentUserIsPlayer, game?.status])
 
-  const currentUserPlayerTurn = useMemo(() => {
-    return (game?.status === GameState.PLAYER1_TURN && currentUserIsPlayer === 1)
-      || (game?.status === GameState.PLAYER2_TURN && currentUserIsPlayer === 2)
-  }, [currentUserIsPlayer, game?.status])
-
+  const gameInPlay = useMemo(() => game?.status === GameState.PLAYING, [game?.status])
+  
   const onSelectPosHandler = useCallback((cellPos: Position) => {
     playMove(gameId, cellPos)
   }, [gameId, playMove])
@@ -224,8 +253,10 @@ const Page: React.FunctionComponent = () => {
 
     // if hovering and not already hit
     if (positionsMatch(cellPos, hover) && !ret.content) {
-      // if current user is opponent and it's their turn
-      if (currentUserIsPlayer === opponentPlayerNum && currentUserPlayerTurn) {
+      const oppponentMoves = game?.players[opponentPlayerNum]?.moves || []
+
+      // if current user is opponent and it's their turn and can still play
+      if (currentUserIsPlayer === opponentPlayerNum && gameInPlay && oppponentMoves.length < game!.totalRounds) {
         // make the cell hittable
         ret.content = <PlayerMove />
         ret.style.cursor = 'pointer'
@@ -235,7 +266,7 @@ const Page: React.FunctionComponent = () => {
     }
 
     return ret
-  }, [onSelectPosHandler, currentUserIsPlayer, currentUserPlayerTurn, game?.updateCount])
+  }, [game, currentUserIsPlayer, gameInPlay, onSelectPosHandler, game?.updateCount])
 
   const player1BoardCellRenderer = useCallback((cellPos: Position, hover: Position, baseStyles: CssStyle) => {
     return playerBoardCellRenderer(1, cellPos, hover, baseStyles)
@@ -247,6 +278,42 @@ const Page: React.FunctionComponent = () => {
 
   const player1Hits = useMemo(() => game?.players[1].hits?.reduce((m, v) => m + (v ? 1 : 0), 0), [game?.players])
   const player2Hits = useMemo(() => game?.players[2] ? game?.players[2].hits?.reduce((m, v) => m + (v ? 1 : 0), 0) : 0, [game?.players])
+
+  const player1Rounds = useMemo(() => game?.players[1].moves.length, [game?.players])
+  const player2Rounds = useMemo(() => game?.players[2] ? game?.players[2].moves.length : 0, [game?.players])
+
+  // rendering stuff....
+
+  const statusText = useMemo(() => {
+    switch (game?.status) {
+      case GameState.NEED_OPPONENT:
+        return 'Awaiting opponent'
+      case GameState.PLAYING:
+        return `Playing (${game.totalRounds} rounds)`
+      case GameState.REVEAL_MOVES:
+        if (currentUserIsPlayer) {
+          if (game?.players[currentUserIsPlayer].revealedMoves) {
+            return 'Waiting for opponent to reveal moves'
+          } else {
+            return <Reveal currentUserIsPlayer={currentUserIsPlayer} game={game} />
+          }
+        } else {
+          return 'Reveal moves'
+        }
+      case GameState.REVEAL_BOARD:
+        if (currentUserIsPlayer) {
+          if (game?.players[currentUserIsPlayer].revealedBoard) {
+            return 'Waiting for opponent to reveal board'
+          } else {
+            return <Reveal currentUserIsPlayer={currentUserIsPlayer} game={game} />
+          }
+        } else {
+          return 'Reveal board'
+        }
+      case GameState.ENDED:
+        return `${game.winner === game.player1 ? 'Player 1' : 'Player 2'} wins`
+    }
+  }, [currentUserIsPlayer, game])
 
   return (
     <Container>
@@ -266,7 +333,7 @@ const Page: React.FunctionComponent = () => {
                 <PlayerGameBoardDiv>
                   <BoardTitle data-player={1}>
                     <span>Player 1</span>
-                    <div>P2 hits: {player2Hits}</div>
+                    <div>P2 hits: {player2Hits} / {player2Rounds}</div>
                   </BoardTitle>
                   <PlayerGameBoard
                     boardLength={game.boardLength}
@@ -277,7 +344,7 @@ const Page: React.FunctionComponent = () => {
                 <PlayerGameBoardDiv>
                   <BoardTitle data-player={2}>
                     <span>Player 2</span>
-                    <div>P1 hits: {player1Hits}</div>
+                    <div>P1 hits: {player1Hits} / {player1Rounds}</div>
                   </BoardTitle>
                   <PlayerGameBoard
                     boardLength={game.boardLength}
