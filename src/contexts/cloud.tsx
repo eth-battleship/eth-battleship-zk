@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { initializeApp } from 'firebase/app'
-import { getFirestore, onSnapshot, doc, getDoc, setDoc, Firestore, Unsubscribe } from 'firebase/firestore'
+import { getFirestore, onSnapshot, doc, getDoc, setDoc, Firestore, Unsubscribe, FirestoreError } from 'firebase/firestore'
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { useAsyncEffect } from 'use-async-effect'
 import { useGlobal } from '../hooks'
-import { CloudGameData, CloudPlayerData, createGameId, createPlayerDataId, GameState, PlayerData, Position, ShipConfig } from '../lib/game'
-import { tasks } from 'hardhat'
+import { CloudGameData, createGameId, GameState, Position, ShipConfig } from '../lib/game'
+import { CipherText, decrypt, encrypt } from '../lib/crypto'
 
 const firebaseConfig = {
   apiKey: "AIzaSyCPEb5ujsgWNd_7iQQBtymjmptGp9fim9Y",
@@ -18,14 +18,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-export type OnWatchGameHandler = (game: CloudGameData) => void
-export type OnWatchPlayerDataHandler = (playerData: CloudPlayerData) => void
-
-export interface CloudWatcher {
-  inputId: any,
-  unsub: Unsubscribe,
-}
-
 export interface CloudContextValue {
   connected: boolean,
   connectError: string,
@@ -34,17 +26,31 @@ export interface CloudContextValue {
   updateOpponentHits: (id: any, hits: boolean[]) => Promise<void>,
   playMove: (id: any, cellPos: Position) => Promise<void>,
   reveal: (id: any) => Promise<void>,
-  watchGame: (id: any, callback: OnWatchGameHandler) => CloudWatcher,
-  watchPlayerData: (id: any, callback: OnWatchPlayerDataHandler) => CloudWatcher,
+  watchGame: (id: any) => void,
+  watchedGameId?: number,
+  watchedGame?: CloudGameData,
 }
 
-export const CloudContext = React.createContext({} as CloudContextValue);
+interface Watcher {
+  unsub: Unsubscribe,
+  id: any,
+}
+
+export const CloudContext = React.createContext({} as CloudContextValue)
+
 
 export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const { account, authSig, currentChain } = useGlobal()
   const [ db, setDb ] = useState<Firestore>()
   const [ connectError, setConnectError ] = useState<string>('')
   const [ connected, setConnected ] = useState<boolean>(false)
+  
+  
+  const [watchedGameId, setWatchedGameId] = useState<number>()
+  const [watchedGameNewData, setWatchedGameNewData] = useState<any>()
+  const [watchedGame, setWatchedGame] = useState<CloudGameData>()
+  const [watchedGameUpdateCount, setWatchedGameUpdateCount] = useState<number>()
+  const [watcher, setWatcher] = useState<Watcher>()
 
   useAsyncEffect(async () => {
     try {
@@ -68,56 +74,46 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }
   }, [])
 
-  const addNewGame = useCallback(async (id: any, boardLength: number, totalRounds: number, ships: ShipConfig[]) => {
-    const gameId = createGameId(currentChain!, id)
+  const deriveGameRef = useCallback((id: any) => doc(db!, 'games', createGameId(currentChain!, id)), [currentChain, db])
 
-    await Promise.all([
-      setDoc(doc(db!, 'games', gameId), {
-        id,
-        chain: currentChain?.chainId,
-        boardLength,
-        totalRounds,
-        player1: account,
-        status: GameState.NEED_OPPONENT,
-        created: Date.now(),
-        updateCount: 1,
-      }),
-      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), { 
-        gameId,
-        player: account,
+  const addNewGame = useCallback(async (id: any, boardLength: number, totalRounds: number, ships: ShipConfig[]) => {
+    const gameRef = deriveGameRef(id)
+
+    await setDoc(gameRef, {
+      id,
+      chain: currentChain?.chainId,
+      boardLength,
+      totalRounds,
+      player1: account,
+      player1Private: await encrypt(authSig, {
         ships,
         moves: [],
-        updateCount: 1,
-      })
-    ])
-  }, [account, authSig, currentChain, db])
+      }),
+      status: GameState.NEED_OPPONENT,
+      created: Date.now(),
+      updateCount: 1,
+    })
+  }, [account, authSig, currentChain?.chainId, deriveGameRef])
 
   const joinGame = useCallback(async (id: any, ships: ShipConfig[]) => {
-    const gameId = createGameId(currentChain!, id)
+    const gameRef = deriveGameRef(id)
 
-    const ref = doc(db!, 'games', gameId)
+    const { updateCount }: any = (await getDoc(gameRef)).data()
 
-    const { updateCount }: any = (await getDoc(ref)).data()
-
-    await Promise.all([
-      setDoc(ref, {
-        id,
-        player2: account,
-        status: GameState.PLAYING,
-        updateCount: updateCount + 1,
-      }, { merge: true }),
-      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), {
-        gameId,
-        player: account,
+    await setDoc(gameRef, {
+      id,
+      player2: account,
+      player2Private: await encrypt(authSig, {
         ships,
         moves: [],
-        updateCount: 1,
-      })
-    ])
-  }, [account, authSig, currentChain, db])
+      }),
+      status: GameState.PLAYING,
+      updateCount: updateCount + 1,
+    }, { merge: true })
+  }, [account, authSig, deriveGameRef])
 
   const updateOpponentHits = useCallback(async (id: any, hits: boolean[]) => {
-    const gameRef = doc(db!, 'games', createGameId(currentChain!, id))
+    const gameRef = deriveGameRef(id)
 
     const { updateCount, player1, player2, player1Moves, player2Moves }: any = (await getDoc(gameRef)).data()
 
@@ -135,20 +131,18 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }
 
     // update
-    await Promise.all([
-      setDoc(gameRef, {
-        updateCount: updateCount + 1,
-        ...(
-          isPlayer1
-            ? { player2Hits: hits }
-            : { player1Hits: hits }
-        ),
-      }, { merge: true }),
-    ])
-  }, [account, currentChain, db])
+    await setDoc(gameRef, {
+      updateCount: updateCount + 1,
+      ...(
+        isPlayer1
+          ? { player2Hits: hits }
+          : { player1Hits: hits }
+      ),
+    }, { merge: true })
+  }, [account, deriveGameRef])
 
   const reveal = useCallback(async (id: any) => {
-    const gameRef = doc(db!, 'games', createGameId(currentChain!, id))
+    const gameRef = deriveGameRef(id)
 
     const { updateCount, player1, player2, status, ...other }: any = (await getDoc(gameRef)).data()
     let { 
@@ -208,15 +202,33 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
         player2RevealedBoard,
       }, { merge: true }),
     ])
-  }, [account, currentChain, db])
+  }, [account, deriveGameRef])
+
+  const addToMovesArray = useCallback(async (data: CipherText, password: string, move: Position, totalRounds: number) => {
+    const dec: any = await decrypt(password, data)
+    dec.moves.push(move)
+    if (dec.moves.length > totalRounds) {
+      throw new Error('Too many moves')
+    }
+    return await encrypt(password, dec)
+  }, [])
+
 
   const playMove = useCallback(async (id: any, pos: Position) => {
+    const gameRef = deriveGameRef(id)
 
-    // we debounce this one
-    const gameRef = doc(db!, 'games', createGameId(currentChain!, id))
-    const playerDataRef = doc(db!, 'playerData', createPlayerDataId(authSig, id))
-
-    const { updateCount, totalRounds, player1, player2, player1Moves = [], player2Moves = [], status }: any = (await getDoc(gameRef)).data()
+    const { 
+      updateCount, 
+      totalRounds, 
+      player1, 
+      player2, 
+      player1Moves = [], 
+      player2Moves = [], 
+      status,
+      ...props
+    }: any = (await getDoc(gameRef)).data()
+    
+    let { player1Private, player2Private } = props
 
     const isPlayer1 = (account === player1)
     const isPlayer2 = (account === player2)
@@ -229,21 +241,16 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       throw new Error('Game not in play state')
     }
 
-    // add to moves array
-    let { moves, updateCount: pdUpdateCount }: any = (await getDoc(playerDataRef)).data()
-    moves = (moves || []).concat(pos)
-
-    if (moves.length > totalRounds) {
-      throw new Error('Too many moves')
-    }
-
-    // stop when all rounds are done
+    // add to moves data
     if (isPlayer1) {
+      player1Private = await addToMovesArray(player1Private, authSig, pos, totalRounds)
       player1Moves.push(pos)
     } else {
+      player2Private = await addToMovesArray(player2Private, authSig, pos, totalRounds)
       player2Moves.push(pos)
     }
-
+    
+    // stop when all rounds are done
     let newStatus: GameState
     if ((player1Moves.length === player2Moves.length) && (player1Moves.length === totalRounds)) {
       newStatus = GameState.REVEAL_MOVES
@@ -252,35 +259,53 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }
 
     // update
-    await Promise.all([
-      setDoc(gameRef, {
-        updateCount: updateCount + 1,
-        status: newStatus,
-        player1Moves,
-        player2Moves,
-      }, { merge: true }),
-      setDoc(doc(db!, 'playerData', createPlayerDataId(authSig, id)), {
-        moves,
-        updateCount: pdUpdateCount + 1,
-      }, { merge: true })
-    ])
-  }, [account, authSig, currentChain, db])
+    await setDoc(gameRef, {
+      updateCount: updateCount + 1,
+      status: newStatus,
+      player1Moves,
+      player2Moves,
+      player1Private,
+      player2Private,
+    }, { merge: true })
+  }, [account, addToMovesArray, authSig, deriveGameRef])
 
-  const watchGame = useCallback((id: any, callback: OnWatchGameHandler) => {
-    const unsub = onSnapshot(doc(db!, 'games', createGameId(currentChain!, id)), doc => {
-      callback(doc.data() as CloudGameData)
-    })
+  const watchGame = useCallback((id: any) => {
+    if (watcher && watcher.id !== id) {
+      watcher.unsub()
+      setWatchedGameNewData(undefined)
+    }
 
-    return { unsub, inputId: id }
-  }, [currentChain, db])
+    const gameRef = deriveGameRef(id)
 
-  const watchPlayerData = useCallback((id: any, callback: OnWatchPlayerDataHandler) => {
-    const unsub = onSnapshot(doc(db!, 'playerData', createPlayerDataId(authSig, id)), doc => {
-      callback(doc.data() as CloudPlayerData)
-    })
+    setWatchedGameId(id)
 
-    return { unsub, inputId: id }
-  }, [authSig, db])
+    setWatcher({
+      id,
+      unsub: onSnapshot(gameRef, dc => {
+        setWatchedGameNewData(dc.data())
+      })
+    }
+      
+    )
+  }, [deriveGameRef, watcher])
+
+  useEffect(() => {
+    if (watchedGameNewData && watchedGameNewData.updateCount !== watchedGameUpdateCount) {
+      setWatchedGameUpdateCount(watchedGameNewData.updateCount)
+
+      ;(async () => {
+        const obj: any = watchedGameNewData
+
+        if (account === obj.player1) {
+          obj.playerData = await decrypt(authSig, obj.player1Private)
+        } else if (account === obj.player2) {
+          obj.playerData = await decrypt(authSig, obj.player2Private)
+        }
+
+        setWatchedGame(obj as CloudGameData)
+      })()
+    }
+  }, [account, authSig, watchedGameNewData, watchedGameUpdateCount])
 
   return (
     <CloudContext.Provider value={{
@@ -292,7 +317,8 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       playMove,
       reveal,
       watchGame,
-      watchPlayerData,
+      watchedGameId,
+      watchedGame,
     }}>
       {children}
     </CloudContext.Provider>

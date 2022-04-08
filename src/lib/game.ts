@@ -28,8 +28,6 @@ export interface ShipConfig {
 }
 
 export interface PlayerData {
-  gameId: string,
-  player: string,
   ships: ShipConfig[],
   moves: Position[],
   hits?: boolean[],
@@ -47,10 +45,6 @@ export interface BaseGameData {
   status: GameState,
 }
 
-export interface CloudPlayerData extends PlayerData {
-  updateCount: number,
-}
-
 export interface CloudGameData extends BaseGameData {
   player1Moves?: Position[],
   player1Hits?: boolean[],
@@ -60,6 +54,7 @@ export interface CloudGameData extends BaseGameData {
   player2RevealedMoves?: boolean,
   player1RevealedBoard?: boolean,
   player2RevealedBoard?: boolean,
+  playerData?: PlayerData,
   created: number,
   updateCount: number,
 }
@@ -249,10 +244,6 @@ export const bigNumToMoves = (boardLength: number, moves: any): Position[] => {
 export const shipLengthsToBytesHex = (shipLengths: number[]): string => hexlify(shipLengths)
 
 export const bytesHexToShipLengths = (shipLengthsHex: string): number[] => Array.from(arrayify(shipLengthsHex))
-
-export const createPlayerDataId = (authSig: string, id: any): string => {
-  return new SHA3(512).update(authSig).update(id.toString()).digest('hex')
-}
 
 export const createGameId = (chain: ChainInfo, id: any): string => {
   return `${id}-${chain.genesisBlockHash!}`

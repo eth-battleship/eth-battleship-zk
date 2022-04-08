@@ -33,9 +33,10 @@ const config: HardhatUserConfig = {
     },
     rinkeby: {
       chainId: 4,
+      gas: 'auto',
       url: `https://rinkeby.infura.io/v3/${process.env.INFURA_ID}`,
       accounts: {
-        mnemonic: process.env.MNEMONIC,
+        mnemonic: process.env.MNEMONIC || TEST_MNEMONIC,
       },
       timeout: 120000,
     }

@@ -1,10 +1,8 @@
 import structuredClone from "@ungap/structured-clone"
-import delay from "delay"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useAsyncEffect } from 'use-async-effect'
-import { CloudWatcher } from "../contexts"
-import { applyColorsToShips, bigNumToMoves, bytesHexToShipLengths, bytesHexToShips, calculateHits, CloudGameData, CloudPlayerData, ContractGameData, GameData, GameState, PlayerData, shipsSitOn } from "../lib/game"
+import { applyColorsToShips, bigNumToMoves, bytesHexToShipLengths, bytesHexToShips, calculateHits, ContractGameData, GameData, GameState, shipsSitOn } from "../lib/game"
 import { ADDRESS_ZERO } from "../lib/utils"
 import { useCloud, useGlobal } from "./contexts"
 import { useContract } from "./contract"
@@ -19,17 +17,8 @@ export interface UseGameHook {
  * Asynchronous action progress indicator.
  */
 export const useGame = (gameId?: number): UseGameHook => {
-  const { watchGame, watchPlayerData, updateOpponentHits } = useCloud()
+  const { watchGame, watchedGame, watchedGameId, updateOpponentHits } = useCloud()
   const { account } = useGlobal()
-  const [playerDataWatcher, setPlayerDataWatcher] = useState<CloudWatcher>()
-  const [gameWatcher, setGameWatcher] = useState<CloudWatcher>()
-  
-  const [updatedCloudGameData, setUpdatedCloudGameData] = useState<CloudGameData>()
-  const [cloudGameData, setCloudGameData] = useState<CloudGameData>()
-  
-  const [updatedCloudPlayerData, setUpdatedCloudPlayerData] = useState<CloudPlayerData>()
-  const [cloudPlayerData, setCloudPlayerData] = useState<CloudPlayerData>()
-
   const [contractGameData, setContractGameData] = useState<ContractGameData>()
   const [error, setError] = useState<string>()
 
@@ -37,53 +26,10 @@ export const useGame = (gameId?: number): UseGameHook => {
 
   // watchers
   useEffect(() => {
-    if (!gameWatcher || gameWatcher.inputId !== gameId) {
-      if (gameWatcher) {
-        gameWatcher.unsub()
-        setGameWatcher(undefined)
-      }
-
-      setUpdatedCloudGameData(undefined)
-
-      if (gameId) {
-        setGameWatcher(watchGame(gameId, setUpdatedCloudGameData))
-      }
+    if (gameId && watchedGameId !== gameId) {
+      watchGame(gameId)
     }
-  }, [gameId, gameWatcher, watchGame])
-  useEffect(() => {
-    if (!playerDataWatcher || playerDataWatcher.inputId !== gameId) {
-      if (playerDataWatcher) {
-        playerDataWatcher.unsub()
-        setPlayerDataWatcher(undefined)
-      }
-
-      setUpdatedCloudPlayerData(undefined)
-
-      if (gameId) {
-        setPlayerDataWatcher(watchPlayerData(gameId, setUpdatedCloudPlayerData))
-      }
-    }
-  }, [gameId, playerDataWatcher, watchPlayerData])
-
-  // when updated cloud data comes in, update the working data set with it
-  useEffect(() => {
-    if (!updatedCloudGameData) {
-      return
-    }
-
-    if (!cloudGameData || updatedCloudGameData.updateCount > cloudGameData.updateCount) {
-      setCloudGameData(updatedCloudGameData)
-    }
-  }, [cloudGameData, contract, gameId, updatedCloudGameData])
-  useEffect(() => {
-    if (!updatedCloudPlayerData) {
-      return
-    }
-
-    if (!cloudPlayerData || updatedCloudPlayerData.updateCount > cloudPlayerData.updateCount) {
-      setCloudPlayerData(updatedCloudPlayerData)
-    }
-  }, [cloudGameData, cloudPlayerData, updatedCloudGameData, updatedCloudPlayerData])
+  }, [gameId, watchGame, watchedGameId])
 
   // load contract game data
   const reloadContractData = useCallback(async (id?: number) => {
@@ -131,16 +77,12 @@ export const useGame = (gameId?: number): UseGameHook => {
       // load player data from contract
       const pd1 = await contract.players(id, obj.player1)
       obj.players[1] = {
-        gameId: `${id}`,
-        player: obj.player1,
         moves: bigNumToMoves(obj.boardLength, pd1.moves),
         ships: bytesHexToShips(pd1.ships, obj.shipLengths),
       }
       if (obj.player2) {
         const pd2 = await contract.players(id, obj.player2)
         obj.players[2] = {
-          gameId: `${id}`,
-          player: obj.player2!,
           moves: bigNumToMoves(obj.boardLength, pd2.moves),
           ships: bytesHexToShips(pd2.ships, obj.shipLengths),
         }
@@ -182,21 +124,21 @@ export const useGame = (gameId?: number): UseGameHook => {
 
   // combine both sets of data
   const gameWithoutPlayers = useMemo(() => {
-    if (cloudGameData && contractGameData) {      
+    if (watchedGame && contractGameData) {      
       const obj = {
-        ...structuredClone(cloudGameData),
+        ...structuredClone(watchedGame),
         ...structuredClone(contractGameData), // overwrite cloud data with contract data
       }
 
       if (contractGameData.status === GameState.UNKNOWN) {
-        obj.status = cloudGameData.status
+        obj.status = watchedGame.status
       }
 
       return obj
     } else {
       return undefined
     }
-  }, [cloudGameData, contractGameData])
+  }, [watchedGame, contractGameData])
 
   const currentUserIsPlayer = useMemo(() => {
     if (account === gameWithoutPlayers?.player1) {
@@ -214,15 +156,15 @@ export const useGame = (gameId?: number): UseGameHook => {
       const ret: GameData = structuredClone(gameWithoutPlayers) 
 
       // augment with cloud PRIVATE data if possible
-      if (cloudPlayerData) {
+      if (watchedGame) {
         for (let i = 1; i <= 2; i += 1) {
           if (currentUserIsPlayer === i) {
             if (gameWithoutPlayers.players[i]) {
               if (!gameWithoutPlayers.players[i].ships.length) {
-                ret.players[i].ships = applyColorsToShips(cloudPlayerData.ships, i)
+                ret.players[i].ships = applyColorsToShips(watchedGame.playerData!.ships, i)
               }
               if (!gameWithoutPlayers.players[i].moves.length) {
-                ret.players[i].moves = structuredClone(cloudPlayerData.moves)
+                ret.players[i].moves = structuredClone(watchedGame.playerData!.moves)
               }
             }
           }
@@ -231,14 +173,14 @@ export const useGame = (gameId?: number): UseGameHook => {
 
       // augment with cloud PUBLIC data if not already set
       if (!gameWithoutPlayers.players[1].moves.length) {
-        ret.players[1].moves = structuredClone(cloudGameData?.player1Moves || [])
+        ret.players[1].moves = structuredClone(watchedGame?.player1Moves || [])
       }
       if (!gameWithoutPlayers.players[1].hits?.length) {
         ret.players[1].hits = ret.player1Hits || []
       }
       if (gameWithoutPlayers.players[2]) {
         if (!gameWithoutPlayers.players[2].moves.length) {
-          ret.players[2].moves = structuredClone(cloudGameData?.player2Moves || [])
+          ret.players[2].moves = structuredClone(watchedGame?.player2Moves || [])
         }
         if (!gameWithoutPlayers.players[2].hits?.length) {
           ret.players[2].hits = ret.player2Hits || []
@@ -249,7 +191,7 @@ export const useGame = (gameId?: number): UseGameHook => {
     } else {
       return undefined
     }
-  }, [cloudGameData?.player1Moves, cloudGameData?.player2Moves, cloudPlayerData, currentUserIsPlayer, gameWithoutPlayers])
+  }, [currentUserIsPlayer, gameWithoutPlayers, watchedGame])
 
   // update opponent hits
   useAsyncEffect(async () => {
