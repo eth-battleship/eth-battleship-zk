@@ -39,7 +39,6 @@ export const useGame = (gameId?: number): UseGameHook => {
         return
       }
 
-      // let's bust a cache
       const d = await contract.games(id)
 
       const obj: ContractGameData = {
@@ -49,7 +48,7 @@ export const useGame = (gameId?: number): UseGameHook => {
         shipLengths: bytesHexToShipLengths(d.shipSizes),
         player1: d.player1,
         player2: d.player2 !== ADDRESS_ZERO ? d.player2 : undefined,
-        status: GameState.UNKNOWN,
+        status: GameState.NEED_OPPONENT,
         players: {},
       }
 
@@ -58,7 +57,7 @@ export const useGame = (gameId?: number): UseGameHook => {
           obj.status = GameState.NEED_OPPONENT
           break
         case 1:
-          obj.status = GameState.UNKNOWN
+          obj.status = GameState.PLAYING
           break
         case 2:
           obj.status = GameState.REVEAL_MOVES
@@ -123,16 +122,64 @@ export const useGame = (gameId?: number): UseGameHook => {
     return () => clearInterval(timer)
   }, [gameId, reloadContractData])
 
+  // current user is player?
+  const currentUserIsPlayer = useMemo(() => {
+    if (account === contractGameData?.player1) {
+      return 1
+    } else if (account === contractGameData?.player2) {
+      return 2
+    } else {
+      return 0
+    }
+  }, [account, contractGameData?.player1, contractGameData?.player2])
+
   // combine both sets of data
-  const gameWithoutPlayers = useMemo(() => {
-    if (watchedGame && contractGameData) {      
-      const obj = {
-        ...structuredClone(watchedGame),
-        ...structuredClone(contractGameData), // overwrite cloud data with contract data
+  const game = useMemo(() => {
+    if (watchedGame && contractGameData) {    
+      // start with cloud data
+      const obj = structuredClone(watchedGame) as GameData
+      
+      // layer over the contract data
+      ;[
+        'boardLength', 
+        'totalRounds',
+        'shipLengths',
+        'player1',
+        'player2',
+        'status'
+      ].forEach((k: string) => {
+        // @ts-ignore
+        obj[k] = contractGameData[k]
+      })
+
+      // ready to reveal moves?
+      if (obj.status === GameState.PLAYING && watchedGame.status === GameState.REVEAL_MOVES) {  
+        obj.status = GameState.REVEAL_MOVES
       }
 
-      if (contractGameData.status === GameState.UNKNOWN) {
-        obj.status = watchedGame.status
+      // now use contract player data where available
+      for (let i = 1; i <= 2; i += 1) {
+        if (obj.players[i]) {
+          // always ensure there are always certain arrays
+          obj.players[i].hits = obj.players[i].hits || []
+          obj.players[i].moves = obj.players[i].moves || []
+          obj.players[i].ships = obj.players[i].ships || []
+
+          if (contractGameData.players[i]?.ships.length) {
+            obj.players[i].ships = structuredClone(contractGameData.players[i].ships)
+          }
+          if (contractGameData.players[i]?.moves.length) {
+            obj.players[i].moves = structuredClone(contractGameData.players[i].moves)
+          }
+          if (contractGameData.players[i]?.hits?.length) {
+            obj.players[i].hits = structuredClone(contractGameData.players[i].hits)
+          }
+
+          // add colors to ships
+          if (obj.players[i].ships) {
+            obj.players[i].ships = applyColorsToShips(obj.players[i].ships, i)
+          }
+        }
       }
 
       return obj
@@ -140,59 +187,6 @@ export const useGame = (gameId?: number): UseGameHook => {
       return undefined
     }
   }, [watchedGame, contractGameData])
-
-  const currentUserIsPlayer = useMemo(() => {
-    if (account === gameWithoutPlayers?.player1) {
-      return 1
-    } else if (account === gameWithoutPlayers?.player2) {
-      return 2
-    } else {
-      return 0
-    }
-  }, [account, gameWithoutPlayers?.player1, gameWithoutPlayers?.player2])
-
-  const game = useMemo(() => {
-    if (gameWithoutPlayers) {
-      // @ts-ignore
-      const ret: GameData = structuredClone(gameWithoutPlayers) 
-
-      // augment with cloud PRIVATE data if possible
-      if (watchedGame) {
-        for (let i = 1; i <= 2; i += 1) {
-          if (currentUserIsPlayer === i) {
-            if (gameWithoutPlayers.players[i]) {
-              if (!gameWithoutPlayers.players[i].ships.length) {
-                ret.players[i].ships = applyColorsToShips(watchedGame.playerData!.ships, i)
-              }
-              if (!gameWithoutPlayers.players[i].moves.length) {
-                ret.players[i].moves = structuredClone(watchedGame.playerData!.moves)
-              }
-            }
-          }
-        }
-      }
-
-      // augment with cloud PUBLIC data if not already set
-      if (!gameWithoutPlayers.players[1].moves.length) {
-        ret.players[1].moves = structuredClone(watchedGame?.player1Moves || [])
-      }
-      if (!gameWithoutPlayers.players[1].hits?.length) {
-        ret.players[1].hits = ret.player1Hits || []
-      }
-      if (gameWithoutPlayers.players[2]) {
-        if (!gameWithoutPlayers.players[2].moves.length) {
-          ret.players[2].moves = structuredClone(watchedGame?.player2Moves || [])
-        }
-        if (!gameWithoutPlayers.players[2].hits?.length) {
-          ret.players[2].hits = ret.player2Hits || []
-        }
-      }
-
-      return ret
-    } else {
-      return undefined
-    }
-  }, [currentUserIsPlayer, gameWithoutPlayers, watchedGame])
 
   // update opponent hits
   useAsyncEffect(async () => {

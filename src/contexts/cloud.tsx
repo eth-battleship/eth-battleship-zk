@@ -89,10 +89,16 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       boardLength,
       totalRounds,
       player1: account,
-      player1Private: await encrypt(authSig, {
-        ships,
-        moves: [],
-      }),
+      players: {
+        1: {
+          private: await encrypt(authSig, {
+            ships,
+            moves: [],
+          }),
+          moves: [],
+          hits: [],
+        },
+      },
       status: GameState.NEED_OPPONENT,
       created: Date.now(),
       updateCount: 1,
@@ -102,15 +108,22 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const joinGame = useCallback(async (id: any, ships: ShipConfig[]) => {
     const gameRef = deriveGameRef(id)
 
-    const { updateCount }: any = (await getDoc(gameRef)).data()
+    const { players, updateCount }: any = (await getDoc(gameRef)).data()
 
     await setDoc(gameRef, {
       id,
       player2: account,
-      player2Private: await encrypt(authSig, {
-        ships,
-        moves: [],
-      }),
+      players: {
+        ...players,
+        2: {
+          private: await encrypt(authSig, {
+            ships,
+            moves: [],
+          }),
+          moves: [],
+          hits: [],
+        }
+      },
       status: GameState.PLAYING,
       updateCount: updateCount + 1,
     }, { merge: true })
@@ -124,7 +137,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     updateHitsTimer = setTimeout(async () => {
       const gameRef = deriveGameRef(id)
 
-      const { updateCount, player1, player2, player1Moves, player2Moves }: any = (await getDoc(gameRef)).data()
+      const { updateCount, player1, player2, players }: any = (await getDoc(gameRef)).data()
 
       const isPlayer1 = (account === player1)
       const isPlayer2 = (account === player2)
@@ -133,20 +146,21 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
         throw new Error('Must be a player')
       }
 
-      const existingMoves = isPlayer1 ? player2Moves : player1Moves
+      const opponentPlayer = isPlayer1 ? 2 : 1
 
-      if (hits.length !== existingMoves.length) {
-        throw new Error(`Hits array length mismatch: ${hits.length} != ${existingMoves.length}`)
+      const opponentMoves = players[opponentPlayer].moves
+
+      if (hits.length !== opponentMoves.length) {
+        throw new Error(`Hits array length mismatch: ${hits.length} != ${opponentMoves.length}`)
       }
+
+      // update hits
+      players[opponentPlayer].hits = hits
 
       // update
       await setDoc(gameRef, {
         updateCount: updateCount + 1,
-        ...(
-          isPlayer1
-            ? { player2Hits: hits }
-            : { player1Hits: hits }
-        ),
+        players,
       }, { merge: true })
     }, 2000)
   }, [account, deriveGameRef])
@@ -154,13 +168,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const reveal = useCallback(async (id: any) => {
     const gameRef = deriveGameRef(id)
 
-    const { updateCount, player1, player2, status, ...other }: any = (await getDoc(gameRef)).data()
-    let { 
-      player1RevealedMoves = false, 
-      player2RevealedMoves = false,
-      player1RevealedBoard = false, 
-      player2RevealedBoard = false,
-    } = other
+    const { updateCount, player1, player2, players, status }: any = (await getDoc(gameRef)).data()
 
     const isPlayer1 = (account === player1)
     const isPlayer2 = (account === player2)
@@ -169,35 +177,23 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       throw new Error('Must be a player')
     }
 
+    const activePlayer = isPlayer1 ? 1 : 2
+
     let newStatus = status
 
     switch (status) {
       case GameState.REVEAL_MOVES:
-        if (isPlayer1) {
-          player1RevealedMoves = true
-        } else {
-          player2RevealedMoves = true
-        }
-
-        if (player1RevealedMoves && player2RevealedMoves) {
+        players[activePlayer].revealedMoves = true
+        if (players[1].revealedMoves && players[2].revealedMoves) {
           newStatus = GameState.REVEAL_BOARD
         }
-
         break
-
       case GameState.REVEAL_BOARD:
-        if (isPlayer1) {
-          player1RevealedBoard = true
-        } else {
-          player2RevealedBoard = true
-        }
-
-        if (player1RevealedBoard && player2RevealedBoard) {
+        players[activePlayer].revealedBoard = true
+        if (players[1].revealedBoard && players[2].revealedBoard) {
           newStatus = GameState.ENDED
         }
-
         break
-
       default:
         throw new Error('Game not in correct state')
     }
@@ -206,10 +202,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       setDoc(gameRef, {
         updateCount: updateCount + 1,
         status: newStatus,
-        player1RevealedMoves,
-        player2RevealedMoves,
-        player1RevealedBoard,
-        player2RevealedBoard,
+        players,
       }, { merge: true }),
     ])
   }, [account, deriveGameRef])
@@ -232,13 +225,9 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       totalRounds,
       player1,
       player2,
-      player1Moves = [],
-      player2Moves = [],
+      players,
       status,
-      ...props
     }: any = (await getDoc(gameRef)).data()
-
-    let { player1Private, player2Private } = props
 
     const isPlayer1 = (account === player1)
     const isPlayer2 = (account === player2)
@@ -252,17 +241,13 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }
 
     // add to moves data
-    if (isPlayer1) {
-      player1Private = await addToMovesArray(player1Private, authSig, pos, totalRounds)
-      player1Moves.push(pos)
-    } else {
-      player2Private = await addToMovesArray(player2Private, authSig, pos, totalRounds)
-      player2Moves.push(pos)
-    }
+    const activePlayer = isPlayer1 ? 1 : 2
+    players[activePlayer].moves.push(pos)
+    players[activePlayer].private = await addToMovesArray(players[activePlayer].private, authSig, pos, totalRounds)
 
     // stop when all rounds are done
     let newStatus: GameState
-    if ((player1Moves.length === player2Moves.length) && (player1Moves.length === totalRounds)) {
+    if ((players[1].moves.length === players[2].moves.length) && (players[1].moves.length === totalRounds)) {
       newStatus = GameState.REVEAL_MOVES
     } else {
       newStatus = GameState.PLAYING
@@ -271,11 +256,8 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     // update
     await setDoc(gameRef, {
       updateCount: updateCount + 1,
+      players,
       status: newStatus,
-      player1Moves,
-      player2Moves,
-      player1Private,
-      player2Private,
     }, { merge: true })
   }, [account, addToMovesArray, authSig, deriveGameRef])
 
@@ -323,9 +305,11 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
         const obj: any = watchedGameNewData
 
         if (account === obj.player1) {
-          obj.playerData = await decrypt(authSig, obj.player1Private)
+          const { moves, ships } = await decrypt(authSig, obj.players[1].private) as any
+          Object.assign(obj.players[1], { moves, ships })
         } else if (account === obj.player2) {
-          obj.playerData = await decrypt(authSig, obj.player2Private)
+          const { moves, ships } = await decrypt(authSig, obj.players[2].private) as any
+          Object.assign(obj.players[2], { moves, ships })
         }
 
         setWatchedGame(obj as CloudGameData)

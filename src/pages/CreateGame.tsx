@@ -33,7 +33,7 @@ const Page: React.FunctionComponent = () => {
   const { addNewGame } = useCloud()
 
   const [ ships, setShips ] = useState<ShipConfig[]>([
-    { "id": 0, "position": { "x": 0, "y": 2 }, "length": 5, "isVertical": false }, { "id": 1, "position": { "x": 3, "y": 7 }, "length": 4, "isVertical": true }, { "id": 2, "position": { "x": 3, "y": 1 }, "length": 3, "isVertical": false }, { "id": 3, "position": { "x": 7, "y": 6 }, "length": 3, "isVertical": true }, { "id": 4, "position": { "x": 7, "y": 3 }, "length": 2, "isVertical": false }
+    /*{ "id": 0, "position": { "x": 0, "y": 2 }, "length": 5, "isVertical": false }, { "id": 1, "position": { "x": 3, "y": 7 }, "length": 4, "isVertical": true }, { "id": 2, "position": { "x": 3, "y": 1 }, "length": 3, "isVertical": false }, { "id": 3, "position": { "x": 7, "y": 6 }, "length": 3, "isVertical": true }, { "id": 4, "position": { "x": 7, "y": 3 }, "length": 2, "isVertical": false }*/
   ])
 
   const contract = useContract()

@@ -60,7 +60,7 @@ const Page: React.FunctionComponent = () => {
           <thead>
             <tr>
               <th>id</th>
-              <th>started</th>
+              <th>created</th>
               <th>player1</th>
               <th>player2</th>
               <th>status</th>

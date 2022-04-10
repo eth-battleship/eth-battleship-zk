@@ -5,30 +5,11 @@ import { ChainInfo } from './chain'
 
 
 export enum GameState {
-  UNKNOWN = -1,
   NEED_OPPONENT = 0,
   PLAYING = 1,
   REVEAL_MOVES = 2,
   REVEAL_BOARD = 3,
   ENDED = 4,
-}
-
-export const gameStatusToText = (s: GameState): string => {
-  switch (s) {
-    case GameState.NEED_OPPONENT:
-      return 'Awaiting opponent'
-    case GameState.PLAYING:
-      return 'Playing'
-    case GameState.REVEAL_MOVES:
-      return 'Reveal moves'
-    case GameState.REVEAL_BOARD:
-      return 'Reveal board'
-    case GameState.ENDED:
-      return 'Ended'
-    case GameState.UNKNOWN:
-    default:
-      return 'Unknown'
-  }
 }
 
 export interface Position {
@@ -63,15 +44,6 @@ export interface BaseGameData {
 }
 
 export interface CloudGameData extends BaseGameData {
-  player1Moves?: Position[],
-  player1Hits?: boolean[],
-  player2Moves?: Position[],
-  player2Hits?: boolean[],
-  player1RevealedMoves?: boolean,
-  player2RevealedMoves?: boolean,
-  player1RevealedBoard?: boolean,
-  player2RevealedBoard?: boolean,
-  playerData?: PlayerData,
   created: number,
   updateCount: number,
 }
@@ -267,3 +239,19 @@ export const createGameId = (chain: ChainInfo, id: any): string => {
 }
 
 
+export const gameStatusToText = (s: GameState): string => {
+  switch (s) {
+    case GameState.NEED_OPPONENT:
+      return 'Awaiting opponent'
+    case GameState.PLAYING:
+      return 'Playing'
+    case GameState.REVEAL_MOVES:
+      return 'Reveal moves'
+    case GameState.REVEAL_BOARD:
+      return 'Reveal board'
+    case GameState.ENDED:
+      return 'Ended'
+    default:
+      return 'Unknown'
+  }
+}
