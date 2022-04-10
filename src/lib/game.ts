@@ -23,6 +23,8 @@ export const gameStatusToText = (s: GameState): string => {
       return 'Reveal moves'
     case GameState.REVEAL_BOARD:
       return 'Reveal board'
+    case GameState.ENDED:
+      return 'Ended'
     case GameState.UNKNOWN:
     default:
       return 'Unknown'
