@@ -87,6 +87,11 @@ const createTheme = (): any => ({
     textColor: black,
     shadowColor: 'rgba(0, 0, 0, 0.8)',
   },
+  gameList: {
+    hover: {
+      bgColor: lighterGrey,
+    }
+  },
   gameBoard: {
     borderColor: black,
     cell: {

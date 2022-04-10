@@ -1,6 +1,5 @@
 import structuredClone from '@ungap/structured-clone'
 import { BigNumber } from '@ethersproject/bignumber'
-import { SHA3 } from 'sha3'
 import { arrayify, hexlify } from '@ethersproject/bytes'
 import { ChainInfo } from './chain'
 
@@ -12,6 +11,22 @@ export enum GameState {
   REVEAL_MOVES = 2,
   REVEAL_BOARD = 3,
   ENDED = 4,
+}
+
+export const gameStatusToText = (s: GameState): string => {
+  switch (s) {
+    case GameState.NEED_OPPONENT:
+      return 'Awaiting opponent'
+    case GameState.PLAYING:
+      return 'Playing'
+    case GameState.REVEAL_MOVES:
+      return 'Reveal moves'
+    case GameState.REVEAL_BOARD:
+      return 'Reveal board'
+    case GameState.UNKNOWN:
+    default:
+      return 'Unknown'
+  }
 }
 
 export interface Position {

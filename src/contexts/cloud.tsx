@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { initializeApp } from 'firebase/app'
-import { getFirestore, onSnapshot, doc, getDoc, setDoc, Firestore, Unsubscribe, FirestoreError } from 'firebase/firestore'
+import { getFirestore, query, onSnapshot, doc, getDoc, setDoc, Firestore, Unsubscribe, collection, orderBy, where } from 'firebase/firestore'
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { useAsyncEffect } from 'use-async-effect'
 import { useGlobal } from '../hooks'
@@ -29,6 +29,7 @@ export interface CloudContextValue {
   watchGame: (id: any) => void,
   watchedGameId?: number,
   watchedGame?: CloudGameData,
+  gameList?: CloudGameData[],
 }
 
 interface Watcher {
@@ -46,12 +47,13 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const [ connectError, setConnectError ] = useState<string>('')
   const [ connected, setConnected ] = useState<boolean>(false)
   
-  
   const [watchedGameId, setWatchedGameId] = useState<number>()
   const [watchedGameNewData, setWatchedGameNewData] = useState<any>()
   const [watchedGame, setWatchedGame] = useState<CloudGameData>()
   const [watchedGameUpdateCount, setWatchedGameUpdateCount] = useState<number>()
-  const [watcher, setWatcher] = useState<Watcher>()
+  const [watchGameSub, setWatchGameSub] = useState<Watcher>()
+
+  const [gameList, setGameList] = useState<CloudGameData[]>()
 
   useAsyncEffect(async () => {
     try {
@@ -82,7 +84,8 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
 
     await setDoc(gameRef, {
       id,
-      chain: currentChain?.chainId,
+      chain: currentChain?.genesisBlockHash!,
+      chainId: currentChain?.chainId,
       boardLength,
       totalRounds,
       player1: account,
@@ -94,7 +97,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       created: Date.now(),
       updateCount: 1,
     })
-  }, [account, authSig, currentChain?.chainId, deriveGameRef])
+  }, [account, authSig, currentChain?.chainId, currentChain?.genesisBlockHash, deriveGameRef])
 
   const joinGame = useCallback(async (id: any, ships: ShipConfig[]) => {
     const gameRef = deriveGameRef(id)
@@ -276,9 +279,27 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }, { merge: true })
   }, [account, addToMovesArray, authSig, deriveGameRef])
 
+  useEffect(() => {
+    if (db && currentChain?.genesisBlockHash) {
+      const ref = query(
+        collection(db!, "games"), 
+        where("chain", '==', currentChain.genesisBlockHash),
+        orderBy("id", "desc")
+      )
+
+      return onSnapshot(ref, (querySnapshot: any) => {
+        const games: CloudGameData[] = []
+        querySnapshot.forEach((doc: any) => {
+          games.push(doc.data())
+        })
+        setGameList(games)
+      })
+    }
+  }, [currentChain?.genesisBlockHash, db])
+
   const watchGame = useCallback((id: any) => {
-    if (watcher && watcher.id !== id) {
-      watcher.unsub()
+    if (watchGameSub && watchGameSub.id !== id) {
+      watchGameSub.unsub()
       setWatchedGameNewData(undefined)
     }
 
@@ -286,15 +307,13 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
 
     setWatchedGameId(id)
 
-    setWatcher({
+    setWatchGameSub({
       id,
       unsub: onSnapshot(gameRef, dc => {
         setWatchedGameNewData(dc.data())
       })
-    }
-      
-    )
-  }, [deriveGameRef, watcher])
+    })
+  }, [deriveGameRef, watchGameSub])
 
   useEffect(() => {
     if (watchedGameNewData && watchedGameNewData.updateCount !== watchedGameUpdateCount) {
@@ -326,6 +345,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       watchGame,
       watchedGameId, 
       watchedGame,
+      gameList,
     }}>
       {children}
     </CloudContext.Provider>
