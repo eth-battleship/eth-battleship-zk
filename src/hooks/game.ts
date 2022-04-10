@@ -118,6 +118,7 @@ export const useGame = (gameId?: number): UseGameHook => {
 
   // also reload contract data every 5 seconds in case there is stale data coming from network
   useEffect(() => {
+    reloadContractData(gameId)
     const timer = setInterval(() => reloadContractData(gameId), 5000)
     return () => clearInterval(timer)
   }, [gameId, reloadContractData])
@@ -210,7 +211,7 @@ export const useGame = (gameId?: number): UseGameHook => {
       }
 
       // update cloud db
-      await updateOpponentHits(game!.id, opponentHits)
+      updateOpponentHits(game!.id, opponentHits)
     }
   }, [currentUserIsPlayer, game?.updateCount])
 

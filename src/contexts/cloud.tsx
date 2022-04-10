@@ -23,7 +23,7 @@ export interface CloudContextValue {
   connectError: string,
   addNewGame: (id: any, boardLength: number, totalRounds: number, ships: ShipConfig[]) => Promise<void>,
   joinGame: (id: any, ships: ShipConfig[]) => Promise<void>,
-  updateOpponentHits: (id: any, hits: boolean[]) => Promise<void>,
+  updateOpponentHits: (id: any, hits: boolean[]) => void,
   playMove: (id: any, cellPos: Position) => Promise<void>,
   reveal: (id: any) => Promise<void>,
   watchGame: (id: any) => void,
@@ -38,6 +38,7 @@ interface Watcher {
 
 export const CloudContext = React.createContext({} as CloudContextValue)
 
+let updateHitsTimer: any
 
 export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const { account, authSig, currentChain } = useGlobal()
@@ -112,33 +113,39 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
     }, { merge: true })
   }, [account, authSig, deriveGameRef])
 
-  const updateOpponentHits = useCallback(async (id: any, hits: boolean[]) => {
-    const gameRef = deriveGameRef(id)
-
-    const { updateCount, player1, player2, player1Moves, player2Moves }: any = (await getDoc(gameRef)).data()
-
-    const isPlayer1 = (account === player1)
-    const isPlayer2 = (account === player2)
-
-    if (!(isPlayer1 || isPlayer2)) {
-      throw new Error('Must be a player')
+  const updateOpponentHits = useCallback((id: any, hits: boolean[]) => {
+    // do this with a delay in case opponent does lots of moves in one go
+    if (updateHitsTimer) {
+      clearTimeout(updateHitsTimer)
     }
+    updateHitsTimer = setTimeout(async () => {
+      const gameRef = deriveGameRef(id)
 
-    const existingMoves = isPlayer1 ? player2Moves : player1Moves
+      const { updateCount, player1, player2, player1Moves, player2Moves }: any = (await getDoc(gameRef)).data()
 
-    if (hits.length !== existingMoves.length) {
-      throw new Error(`Hits array length mismatch: ${hits.length} != ${existingMoves.length}`)
-    }
+      const isPlayer1 = (account === player1)
+      const isPlayer2 = (account === player2)
 
-    // update
-    await setDoc(gameRef, {
-      updateCount: updateCount + 1,
-      ...(
-        isPlayer1
-          ? { player2Hits: hits }
-          : { player1Hits: hits }
-      ),
-    }, { merge: true })
+      if (!(isPlayer1 || isPlayer2)) {
+        throw new Error('Must be a player')
+      }
+
+      const existingMoves = isPlayer1 ? player2Moves : player1Moves
+
+      if (hits.length !== existingMoves.length) {
+        throw new Error(`Hits array length mismatch: ${hits.length} != ${existingMoves.length}`)
+      }
+
+      // update
+      await setDoc(gameRef, {
+        updateCount: updateCount + 1,
+        ...(
+          isPlayer1
+            ? { player2Hits: hits }
+            : { player1Hits: hits }
+        ),
+      }, { merge: true })
+    }, 2000)
   }, [account, deriveGameRef])
 
   const reveal = useCallback(async (id: any) => {
@@ -217,17 +224,17 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
   const playMove = useCallback(async (id: any, pos: Position) => {
     const gameRef = deriveGameRef(id)
 
-    const { 
-      updateCount, 
-      totalRounds, 
-      player1, 
-      player2, 
-      player1Moves = [], 
-      player2Moves = [], 
+    const {
+      updateCount,
+      totalRounds,
+      player1,
+      player2,
+      player1Moves = [],
+      player2Moves = [],
       status,
       ...props
     }: any = (await getDoc(gameRef)).data()
-    
+
     let { player1Private, player2Private } = props
 
     const isPlayer1 = (account === player1)
@@ -249,7 +256,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       player2Private = await addToMovesArray(player2Private, authSig, pos, totalRounds)
       player2Moves.push(pos)
     }
-    
+
     // stop when all rounds are done
     let newStatus: GameState
     if ((player1Moves.length === player2Moves.length) && (player1Moves.length === totalRounds)) {
@@ -317,7 +324,7 @@ export const CloudProvider: React.FunctionComponent = ({ children }) => {
       playMove,
       reveal,
       watchGame,
-      watchedGameId,
+      watchedGameId, 
       watchedGame,
     }}>
       {children}

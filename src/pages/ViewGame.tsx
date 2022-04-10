@@ -12,7 +12,7 @@ import SetupGameBoard from '../components/SetupGameBoard'
 import SuccessBox from '../components/SuccessBox'
 import { useCloud, useContract, useContractFunctionV2, useGame, useProgress } from '../hooks'
 import { Flow } from '../lib/flow'
-import { CloudGameData, GameData, GameState, getOpponentNum, getPlayerColor, movesToBigNum, Position, positionsMatch, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
+import { GameData, GameState, getOpponentNum, getPlayerColor, movesToBigNum, Position, positionsMatch, ShipConfig, shipLengthsToBytesHex, shipsToBytesHex } from '../lib/game'
 import { CssStyle } from '../components/interfaces'
 
 const Container = styled.div`

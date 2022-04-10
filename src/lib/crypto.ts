@@ -1,12 +1,11 @@
 import { Base64 } from 'js-base64'
 
 const enc = new TextEncoder()
-const dec = new TextDecoder()
 
 const cached: Record<string, CryptoKey> = {}
 
 const deriveKey = async (password: string, salt: ArrayBuffer): Promise<CryptoKey> => {
-  const cacheKey = `${password}${dec.decode(salt)}`
+  const cacheKey = `${password}${Base64.fromUint8Array(new Uint8Array(salt))}`
 
   if (!cached[cacheKey]) {
     const imported = await global.crypto.subtle.importKey(
