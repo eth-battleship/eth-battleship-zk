@@ -146,7 +146,8 @@ export const useGame = (gameId?: number): UseGameHook => {
         'shipLengths',
         'player1',
         'player2',
-        'status'
+        'status',
+        'winner',
       ].forEach((k: string) => {
         // @ts-ignore
         obj[k] = contractGameData[k]
